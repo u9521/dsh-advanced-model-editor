@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "Advanced model configuration page for DSH WebUI",
+  "license": "MIT",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
   "exports": {

@@ -22,7 +22,7 @@ and conflict rules as the official settings UI.
 Clone the repository into the recommended location:
 
 ```sh
-git clone <repository-url> ~/.dsh/plugins/cust-model-editor
+git clone https://github.com/u9521/dsh-advanced-model-editor.git ~/.dsh/plugins/cust-model-editor
 cd ~/.dsh/plugins/cust-model-editor
 ```
 
@@ -67,3 +67,8 @@ dsh plugin --profile web remove @local/dsh-advanced-model-editor
 ```
 
 Restart web and hard-refresh the browser afterwards.
+
+## License
+
+[MIT](LICENSE)
+

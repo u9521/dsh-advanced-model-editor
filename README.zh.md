@@ -19,7 +19,7 @@ LLM 提供方配置——覆盖自定义提供方命名空间(`llm-pi-ai`)与官
 推荐克隆到 `~/.dsh/plugins/cust-model-editor`:
 
 ```sh
-git clone <仓库地址> ~/.dsh/plugins/cust-model-editor
+git clone https://github.com/u9521/dsh-advanced-model-editor.git ~/.dsh/plugins/cust-model-editor
 cd ~/.dsh/plugins/cust-model-editor
 ```
 
@@ -63,3 +63,8 @@ dsh plugin --profile web remove @local/dsh-advanced-model-editor
 ```
 
 之后重启 web 并硬刷新浏览器。
+
+## 许可证
+
+[MIT](LICENSE)
+
