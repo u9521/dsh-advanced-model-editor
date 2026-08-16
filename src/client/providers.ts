@@ -178,10 +178,15 @@ export function ProviderEditor({
 			},
 			child,
 		);
+	// Model compatibility only applies to openai-completions; when the route
+	// speaks another protocol, drop every model's compat at save time so
+	// entries typed under the old protocol do not persist. The cleaned draft
+	// is what the ops (and their dirty check) are computed against.
+	const cleaned = core.stripModelCompat(draft, draft.api);
 	const ops = core.buildProfileOps(
 		row.settingsPath,
 		baseline,
-		draft,
+		cleaned,
 		explicit,
 	);
 	if (keyValue && !explicit.apiKeyEnv) {
@@ -200,7 +205,7 @@ export function ProviderEditor({
 				name,
 				name === "apiKeyEnv" && !explicit.apiKeyEnv
 					? keyRef
-					: draft[name],
+					: cleaned[name],
 			]),
 		);
 		const errors = core.validateProfile(profile);
@@ -516,6 +521,7 @@ export function ProviderEditor({
 				e(ModelList, {
 					value: draft.models,
 					disabled: !explicit.models || readOnly,
+					api: draft.api,
 					probe: {
 						clientApi: row.api,
 						provider: row.provider,
@@ -548,6 +554,7 @@ export function ProviderEditor({
 				value: draft.modelOverrides,
 				disabled:
 					!explicit.modelOverrides || explicit.models || readOnly,
+				api: draft.api,
 				onChange: (value) => setField("modelOverrides", value),
 			}),
 			true,
@@ -711,11 +718,14 @@ export function CreateCustomProvider({
 	const [failure, setFailure] = React.useState("");
 	const [busy, setBusy] = React.useState(false);
 	const submit = async () => {
-		const profile: core.ProviderProfile = {
-			api: protocol as core.Protocol,
-			baseURL,
-			models: catalog,
-		};
+		const profile: core.ProviderProfile = core.stripModelCompat(
+			{
+				api: protocol as core.Protocol,
+				baseURL,
+				models: catalog,
+			},
+			protocol,
+		);
 		if (displayName.trim()) profile.displayName = displayName.trim();
 		const errors = [
 			...(/^[a-z][a-z0-9-]*$/.test(route)
@@ -807,6 +817,7 @@ export function CreateCustomProvider({
 			e(ModelList, {
 				value: catalog,
 				disabled,
+				api: protocol,
 				onChange: (value) =>
 					setCatalog(Array.isArray(value) ? value : []),
 			}),

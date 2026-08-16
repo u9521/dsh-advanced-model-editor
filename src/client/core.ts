@@ -339,6 +339,42 @@ export function valueOf<T = unknown>(response: RpcEnvelope): T {
 	return response.result.value as T;
 }
 
+/**
+ * Drop model-level `compat` from a profile whose route protocol is not
+ * openai-completions. Only applied at save time: the editor hides the field
+ * for other protocols, and a profile that already carries compat entries
+ * (typed while the protocol was openai-completions) must not keep writing
+ * them once the protocol changes.
+ * @param profile - the profile about to be saved.
+ * @param api - the route's protocol as currently drafted.
+ * @returns a profile with every `models`/`modelOverrides` entry's `compat`
+ *   removed when `api` is a non-openai-completions protocol; unchanged
+ *   otherwise (including when no protocol is chosen yet).
+ */
+export function stripModelCompat(
+	profile: ProviderProfile,
+	api: string | undefined,
+): ProviderProfile {
+	if (api === "openai-completions" || api === undefined) return profile;
+	const next = clone(profile);
+	if (Array.isArray(next.models))
+		next.models = next.models.map((model) => {
+			const entry = { ...model };
+			delete entry.compat;
+			return entry;
+		});
+	if (isObject(next.modelOverrides)) {
+		const overrides: Record<string, ModelProfile> = {};
+		for (const [id, model] of Object.entries(next.modelOverrides)) {
+			const entry = { ...(model as ModelProfile) };
+			delete entry.compat;
+			overrides[id] = entry;
+		}
+		next.modelOverrides = overrides;
+	}
+	return next;
+}
+
 export function responseMessage(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
 }

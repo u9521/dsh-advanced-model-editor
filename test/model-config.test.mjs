@@ -13,7 +13,37 @@ import {
   deleteProviderOps,
   parseCapacity,
   formatCapacity,
+  stripModelCompat,
 } from '../src/client/core.ts'
+
+test('strips model compat only when saving a non-openai-completions protocol', () => {
+  const profile = {
+    api: 'anthropic-messages',
+    models: [
+      { id: 'one', compat: { thinkingFormat: 'openai' }, contextWindow: 64000 },
+      { id: 'two', compat: { supportsReasoningEffort: true } },
+    ],
+    modelOverrides: { builtin: { compat: { thinkingFormat: 'openai' } } },
+  }
+  const stripped = stripModelCompat(profile, 'anthropic-messages')
+  assert.deepEqual(stripped.models, [
+    { id: 'one', contextWindow: 64000 },
+    { id: 'two' },
+  ])
+  assert.deepEqual(stripped.modelOverrides, { builtin: {} })
+  assert.equal(stripped.api, 'anthropic-messages')
+
+  // openai-completions (and an unset protocol) keep compat untouched.
+  assert.equal(stripModelCompat(profile, 'openai-completions'), profile)
+  assert.equal(stripModelCompat(profile, undefined), profile)
+  // Any other protocol strips compat.
+  const responses = stripModelCompat(profile, 'openai-responses')
+  assert.equal(responses.models[0].compat, undefined)
+  assert.equal(responses.models[1].compat, undefined)
+  // Original profile is never mutated.
+  assert.equal(profile.models[0].compat.thinkingFormat, 'openai')
+  assert.ok(profile.models[0].compat)
+})
 
 test('parses K/M capacity spellings into plain token counts', () => {
   assert.equal(parseCapacity(''), undefined)

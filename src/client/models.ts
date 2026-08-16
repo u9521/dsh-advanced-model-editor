@@ -9,6 +9,8 @@ export interface ModelFormProps {
 	onChange: (model: ModelProfile) => void;
 	disabled?: boolean;
 	includeId?: boolean;
+	/** Wire protocol of the owning route; model compatibility only applies to openai-completions. */
+	api?: string;
 }
 
 export interface DiscoveryProbe {
@@ -45,6 +47,8 @@ export interface ModelListProps {
 	disabled?: boolean;
 	override?: boolean;
 	probe?: DiscoveryProbe;
+	/** Wire protocol of the owning route; model compatibility only applies to openai-completions. */
+	api?: string;
 }
 
 export interface OfficialModelListProps {
@@ -107,6 +111,7 @@ export function ModelForm({
 	onChange,
 	disabled,
 	includeId,
+	api,
 }: ModelFormProps) {
 	const set = (field: string, value: unknown) =>
 		onChange(setField(model, field, value));
@@ -232,20 +237,22 @@ export function ModelForm({
 					})
 				: null,
 		),
-		e(
-			"div",
-			{ className: "dsh-ma-field dsh-ma-wide" },
-			e(
-				"span",
-				{ className: "dsh-ma-field-label" },
-				tr("models.field.compat"),
-			),
-			e(CompatEditor, {
-				value: model.compat,
-				disabled,
-				onChange: (value) => set("compat", value),
-			}),
-		),
+		api === undefined || api === "openai-completions"
+			? e(
+					"div",
+					{ className: "dsh-ma-field dsh-ma-wide" },
+					e(
+						"span",
+						{ className: "dsh-ma-field-label" },
+						tr("models.field.compat"),
+					),
+					e(CompatEditor, {
+						value: model.compat,
+						disabled,
+						onChange: (value) => set("compat", value),
+					}),
+				)
+			: null,
 	);
 }
 
@@ -481,6 +488,7 @@ export function ModelList({
 	disabled,
 	override,
 	probe,
+	api,
 }: ModelListProps) {
 	const [discovering, setDiscovering] = React.useState(false);
 	const list = Array.isArray(value) ? value : [];
@@ -569,6 +577,7 @@ export function ModelList({
 					model,
 					includeId: !override,
 					disabled,
+					api,
 					onChange: (next) => update(key, next),
 				}),
 			),
