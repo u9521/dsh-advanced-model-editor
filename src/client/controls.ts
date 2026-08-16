@@ -35,6 +35,14 @@ export interface TextInputProps {
 	onChange?: (value: string | number | undefined) => void;
 }
 
+export interface CapacityInputProps {
+	value?: number;
+	disabled?: boolean;
+	placeholder?: string;
+	ariaLabelKey?: string;
+	onChange?: (value: number | undefined) => void;
+}
+
 export interface SelectProps {
 	value?: string;
 	onChange?: (value: string | undefined) => void;
@@ -137,6 +145,7 @@ export const CSS = `
       .dsh-ma-button:focus-visible,.dsh-ma-input:focus-visible,.dsh-ma-select:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
       .dsh-ma-button:disabled,.dsh-ma-input:disabled,.dsh-ma-select:disabled{cursor:not-allowed;opacity:.55}
       .dsh-ma-primary{background:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-label-primary-foreground)}
+      .dsh-ma-primary:hover:not(:disabled){background:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary));border-color:var(--dsw-alias-button-primary-hover,var(--dsw-alias-brand-primary))}
       .dsh-ma-icon{padding:0;width:32px}
       .dsh-ma-status{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;margin:0}
       .dsh-ma-error{color:var(--dsw-alias-state-error-primary)}
@@ -264,6 +273,46 @@ export function TextInput(props: TextInputProps) {
 						? undefined
 						: raw,
 			);
+		},
+	});
+}
+
+export function CapacityInput(props: CapacityInputProps) {
+	// Keystrokes are held here so typing `1000` does not get rewritten to `1K`
+	// mid-word; the stored count is patched in the same breath, and the buffer
+	// is dropped once it agrees with the outside value (or loses focus).
+	const [buffer, setBuffer] = React.useState<string | undefined>(undefined);
+	React.useEffect(() => {
+		setBuffer((current) => {
+			if (current === undefined) return current;
+			const parsed = core.parseCapacity(current);
+			const synced =
+				parsed === undefined
+					? props.value === undefined
+					: parsed === props.value;
+			return synced ? current : undefined;
+		});
+	}, [props.value]);
+	const display =
+		buffer ??
+		(props.value === undefined ? "" : core.formatCapacity(props.value));
+	return e("input", {
+		className: "dsh-ma-input",
+		type: "text",
+		inputMode: "numeric",
+		value: display,
+		disabled: props.disabled === true,
+		placeholder: props.placeholder,
+		"aria-label": props.ariaLabelKey
+			? text(props.ariaLabelKey)
+			: undefined,
+		onBlur: () => setBuffer(undefined),
+		onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
+			const raw = event.target.value;
+			setBuffer(raw);
+			const parsed = core.parseCapacity(raw);
+			if (parsed === undefined) props.onChange?.(undefined);
+			else if (!Number.isNaN(parsed)) props.onChange?.(parsed);
 		},
 	});
 }

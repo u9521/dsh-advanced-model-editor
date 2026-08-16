@@ -56,6 +56,7 @@ export interface OfficialModelListProps {
 const e = React.createElement;
 const tr = core.tr;
 const TextInput = controls.TextInput;
+const CapacityInput = controls.CapacityInput;
 const Modalities = controls.Modalities;
 const ReasoningMap = controls.KeyValueList;
 const CompatEditor = controls.CompatEditor;
@@ -150,12 +151,11 @@ export function ModelForm({
 				{ className: "dsh-ma-field-label" },
 				tr("models.field.contextWindow"),
 			),
-			e(TextInput, {
-				type: "number",
-				min: 1,
-				step: 1,
+			e(CapacityInput, {
 				value: model.contextWindow,
 				disabled,
+				placeholder: "256K",
+				ariaLabelKey: "models.field.contextWindow",
 				onChange: (value) => set("contextWindow", value),
 			}),
 		),
@@ -167,12 +167,11 @@ export function ModelForm({
 				{ className: "dsh-ma-field-label" },
 				tr("models.field.maxTokens"),
 			),
-			e(TextInput, {
-				type: "number",
-				min: 1,
-				step: 1,
+			e(CapacityInput, {
 				value: model.maxTokens,
 				disabled,
+				placeholder: "32K",
+				ariaLabelKey: "models.field.maxTokens",
 				onChange: (value) => set("maxTokens", value),
 			}),
 		),
@@ -306,20 +305,23 @@ export function ModelDiscoveryDialog({
 				.toLowerCase()
 				.includes(needle),
 	);
+	// Only models that are not already configured can be added.
+	const selectable = filtered.filter(
+		(candidate) => !existing.has(candidate.id ?? ""),
+	);
 	const allSelected =
-		filtered.length > 0 &&
-		filtered.every((candidate) => picked.has(candidate.id ?? ""));
+		selectable.length > 0 &&
+		selectable.every((candidate) => picked.has(candidate.id ?? ""));
 	const toggleAll = () =>
 		setPicked((current) => {
 			const next = new Set(current);
 			if (allSelected)
-				filtered.forEach((candidate) => next.delete(candidate.id ?? ""));
-			else filtered.forEach((candidate) => next.add(candidate.id ?? ""));
+				selectable.forEach((candidate) => next.delete(candidate.id ?? ""));
+			else selectable.forEach((candidate) => next.add(candidate.id ?? ""));
 			return next;
 		});
-	const selected = candidates.filter((candidate) => picked.has(candidate.id ?? ""));
-	const overwrites = selected.filter((candidate) =>
-		existing.has(candidate.id ?? ""),
+	const selected = selectable.filter((candidate) =>
+		picked.has(candidate.id ?? ""),
 	);
 	const footer = e(
 		"div",
@@ -352,12 +354,7 @@ export function ModelDiscoveryDialog({
 			onClose,
 			title: tr("models.discovery.title"),
 			closeLabel: tr("models.discovery.close"),
-			description: tr(
-				overwrites.length > 0
-					? "models.discovery.overwriteDescription"
-					: "models.discovery.description",
-				{ count: overwrites.length },
-			),
+			description: tr("models.discovery.description"),
 			footer,
 		},
 		status === "loading"
@@ -392,7 +389,7 @@ export function ModelDiscoveryDialog({
 						e("input", {
 							type: "checkbox",
 							checked: allSelected,
-							disabled: filtered.length === 0,
+							disabled: selectable.length === 0,
 							onChange: toggleAll,
 						}),
 						tr("models.discovery.selectFiltered"),
@@ -414,6 +411,7 @@ export function ModelDiscoveryDialog({
 								e("input", {
 									type: "checkbox",
 									checked: picked.has(candidate.id ?? ""),
+									disabled: exists,
 									onChange: () =>
 										setPicked((current) => {
 											const next = new Set(current);
@@ -429,6 +427,39 @@ export function ModelDiscoveryDialog({
 										? `${candidate.name} (${candidate.id})`
 										: candidate.id,
 								),
+								typeof candidate.contextWindow === "number" ||
+									typeof candidate.maxTokens === "number"
+									? e(
+											"span",
+											{ className: "dsh-ma-route" },
+											[
+												typeof candidate.contextWindow ===
+												"number"
+													? tr(
+															"models.discovery.contextWindow",
+															{
+																value: core.formatCapacity(
+																	candidate.contextWindow,
+																),
+															},
+														)
+													: null,
+												typeof candidate.maxTokens ===
+												"number"
+													? tr(
+															"models.discovery.maxTokens",
+															{
+																value: core.formatCapacity(
+																	candidate.maxTokens,
+																),
+															},
+														)
+													: null,
+											]
+												.filter(Boolean)
+												.join(" · "),
+										)
+									: null,
 								exists
 									? e(
 											"span",
@@ -598,8 +629,16 @@ export function ModelList({
 					),
 					onClose: () => setDiscovering(false),
 					onApply: (models) => {
-						onChange(
-							models.map((model) => ({
+						const known = new Set(
+							list
+								.map((model) => model.id)
+								.filter((id): id is string => Boolean(id)),
+						);
+						const additions: ModelProfile[] = [];
+						for (const model of models) {
+							if (!model.id || known.has(model.id)) continue;
+							known.add(model.id);
+							additions.push({
 								id: model.id,
 								...(model.name ? { name: model.name } : {}),
 								...(typeof model.contextWindow === "number"
@@ -608,8 +647,9 @@ export function ModelList({
 								...(typeof model.maxTokens === "number"
 									? { maxTokens: model.maxTokens }
 									: {}),
-							})),
-						);
+							});
+						}
+						onChange([...list, ...additions]);
 						setDiscovering(false);
 					},
 				})
@@ -623,7 +663,11 @@ export function OfficialModelList({
 	disabled,
 }: OfficialModelListProps) {
 	const models = Array.isArray(value) ? value : [];
-	const update = (index: number, field: string, value: string | number | undefined) =>
+	const update = (
+		index: number,
+		field: string,
+		value: string | number | undefined,
+	) =>
 		onChange(
 			models.map((model, modelIndex) =>
 				modelIndex === index
@@ -722,12 +766,11 @@ export function OfficialModelList({
 							{ className: "dsh-ma-field-label" },
 							tr("models.field.contextWindow"),
 						),
-						e(TextInput, {
-							type: "number",
-							min: 1,
-							step: 1,
+						e(CapacityInput, {
 							value: model.contextWindow,
 							disabled,
+							placeholder: "256K",
+							ariaLabelKey: "models.field.contextWindow",
 							onChange: (value) =>
 								update(index, "contextWindow", value),
 						}),
@@ -740,12 +783,11 @@ export function OfficialModelList({
 							{ className: "dsh-ma-field-label" },
 							tr("models.field.maxTokens"),
 						),
-						e(TextInput, {
-							type: "number",
-							min: 1,
-							step: 1,
+						e(CapacityInput, {
 							value: model.maxTokens,
 							disabled,
+							placeholder: "32K",
+							ariaLabelKey: "models.field.maxTokens",
 							onChange: (value) =>
 								update(index, "maxTokens", value),
 						}),

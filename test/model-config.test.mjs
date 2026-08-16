@@ -11,7 +11,38 @@ import {
   validateRetryPolicy,
   groupProviderRows,
   deleteProviderOps,
+  parseCapacity,
+  formatCapacity,
 } from '../src/client/core.ts'
+
+test('parses K/M capacity spellings into plain token counts', () => {
+  assert.equal(parseCapacity(''), undefined)
+  assert.equal(parseCapacity('   '), undefined)
+  assert.equal(parseCapacity('256K'), 256000)
+  assert.equal(parseCapacity('256k'), 256000)
+  assert.equal(parseCapacity('1M'), 1000000)
+  assert.equal(parseCapacity('1m'), 1000000)
+  assert.equal(parseCapacity('1.5K'), 1500)
+  assert.equal(parseCapacity('2.3M'), 2300000)
+  assert.equal(parseCapacity('131072'), 131072)
+  assert.equal(parseCapacity(' 64K '), 64000)
+  assert.ok(Number.isNaN(parseCapacity('abc')))
+  assert.ok(Number.isNaN(parseCapacity('12K3')))
+})
+
+test('formats stored counts back in the shortest K/M spelling', () => {
+  assert.equal(formatCapacity(256000), '256K')
+  assert.equal(formatCapacity(1000000), '1M')
+  assert.equal(formatCapacity(2000000), '2M')
+  assert.equal(formatCapacity(2300000), '2300K')
+  assert.equal(formatCapacity(131072), '131072')
+  assert.equal(formatCapacity(0), '0')
+  assert.equal(formatCapacity(1), '1')
+  // Round trips through parseCapacity for every M/K whole multiple.
+  for (const value of [1000, 64000, 262144, 1000000, 2000000, 131072]) {
+    assert.equal(parseCapacity(formatCapacity(value)), value)
+  }
+})
 
 test('declares every llm-pi-ai provider field', () => {
   assert.equal(SETTINGS_NS, 'llm-pi-ai')
