@@ -1,5 +1,5 @@
 node_modules/
-node_modules.local/
-lib/
-*.log
 .DS_Store
+*.log
+lib/
+.pnpm-store/

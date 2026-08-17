@@ -7,27 +7,14 @@
   "license": "MIT",
   "main": "./lib/index.js",
   "types": "./lib/types/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./lib/types/index.d.ts",
-      "default": "./lib/index.js"
-    },
-    "./client": "./lib/client.js",
-    "./cordis.patch.yml": "./cordis.patch.yml",
-    "./package.json": "./package.json"
-  },
   "files": [
     "lib",
     "src",
     "cordis.patch.yml"
   ],
   "engines": {
-    "node": "^20.0.0 || >=22.0.0"
-  },
-  "scripts": {
-    "build": "node scripts/build.mjs",
-    "check": "node scripts/build.mjs --check",
-    "test": "npm run build && node --test test/*.test.mjs"
+    "node": "^22.19 || >=24",
+    "dsh": ">=0.1.0-rc.6"
   },
   "dsh": {
     "bundle": {
@@ -44,12 +31,36 @@
       "platform": "web"
     }
   },
-  "devDependencies": {
-    "@types/react": "^18.3.31",
-    "esbuild": "^0.28.2",
-    "typescript": "^7.0.2"
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs --check",
+    "test": "pnpm run build && node --test test/*.test.mjs",
+    "fmt": "prettier --write \"src/**/*.ts\" \"scripts/*.mjs\" \"*.mjs\" \"*.json\" \"*.yml\"",
+    "fmt:check": "prettier --check \"src/**/*.ts\" \"scripts/*.mjs\" \"*.mjs\" \"*.json\" \"*.yml\"",
+    "sync": "node scripts/sync-tsdown.mjs"
   },
-  "allowScripts": {
-    "esbuild@0.28.2": true
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "model",
+    "settings"
+  ],
+  "devDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@types/node": "^22.0.0",
+    "@types/react": "^18.3.1",
+    "lightningcss": "^1.33.0",
+    "prettier": "^3.9.6",
+    "tsdown": "^0.22.14",
+    "typescript": "^6.0.3"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": "./lib/client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
   }
 }
