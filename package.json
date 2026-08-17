@@ -9,8 +9,10 @@
   "types": "./lib/types/index.d.ts",
   "files": [
     "lib",
-    "src",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
   ],
   "engines": {
     "node": "^22.19 || >=24",
