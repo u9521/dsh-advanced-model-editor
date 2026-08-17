@@ -193,3 +193,4 @@ test('modular styles use dark-mode theme tokens and remove prompt divider', () =
   assert.doesNotMatch(css, /border-radius:(?:[1-9][0-9]|9)px/)
   assert.match(css, /dsh-ma-delete-confirm \.dsh-ma-actions\{border-top:0/)
 })
+

@@ -1,0 +1,108 @@
+name: Build & Deploy Dist
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - '.github/**'
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: dist-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+          run_install: false
+
+      - name: Install DSH globally
+        run: npm install -g @deepseek-ai/dsh
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Check code formatting
+        run: pnpm run fmt:check
+
+      - name: Run build and tests
+        run: pnpm test
+
+      - name: Prepare minimal dist package
+        run: |
+          rm -rf .dist
+          mkdir -p .dist/lib
+
+          # Copy compiled outputs
+          cp -r lib/* .dist/lib/
+
+          # Copy root metadata and docs
+          for file in cordis.patch.yml README.md README.zh.md LICENSE; do
+            if [ -f "$file" ]; then
+              cp "$file" .dist/
+            fi
+          done
+
+          # Generate sanitized production package.json
+          node -e '
+            const fs = require("node:fs");
+            const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const distPkg = {
+              name: pkg.name,
+              version: pkg.version,
+              type: pkg.type,
+              description: pkg.description,
+              license: pkg.license,
+              main: pkg.main,
+              types: pkg.types,
+              files: pkg.files,
+              engines: pkg.engines,
+              dsh: pkg.dsh,
+              keywords: pkg.keywords,
+              exports: pkg.exports,
+            };
+            if (pkg.repository) distPkg.repository = pkg.repository;
+            if (pkg.homepage) distPkg.homepage = pkg.homepage;
+            if (pkg.bugs) distPkg.bugs = pkg.bugs;
+            if (pkg.dependencies && Object.keys(pkg.dependencies).length > 0) {
+              distPkg.dependencies = pkg.dependencies;
+            }
+            fs.writeFileSync(".dist/package.json", JSON.stringify(distPkg, null, 2) + "\n");
+          '
+
+          # Generate minimal .gitignore
+          printf "node_modules/\n.DS_Store\n*.log\n" > .dist/.gitignore
+
+      - name: Deploy to dist branch
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'
+        run: |
+          cd .dist
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "build: release dist from commit ${{ github.sha }}"
+          git branch -M dist
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" dist

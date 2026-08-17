@@ -5,7 +5,31 @@ LLM 提供方配置——覆盖自定义提供方命名空间(`llm-pi-ai`)与官
 (`llm-deepseek`),包括内置/自定义提供方、模型列表、推理与思考参数、请求头、重试策略等,
 并沿用官方设置页的校验与冲突规则。
 
-## 环境要求
+## 快速安装 (推荐 / 一行命令)
+
+直接通过 GitHub `dist` 分支安装(CI 自动构建产物,无需手动克隆或本地编译):
+
+```sh
+dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
+```
+
+安装后**重启 web**(`dsh web`)并**硬刷新浏览器**(Cmd+Shift+R)即可。插件以**模型高级设置**出现在设置页。
+
+### 升级与卸载
+
+```sh
+# 升级到最新 dist 版本
+dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
+
+# 卸载
+dsh plugin --profile web remove @local/dsh-advanced-model-editor
+```
+
+---
+
+## 本地开发与源码构建
+
+### 环境要求
 
 - **务必安装 pnpm**——`npx get-pnpm`(参见 <https://pnpm.io/installation>;也可用
   `corepack enable` 或 `npm install -g pnpm`)。构建与 `dsh plugin --profile web add`
@@ -16,7 +40,7 @@ LLM 提供方配置——覆盖自定义提供方命名空间(`llm-pi-ai`)与官
   正在运行的 Harness 完全一致;未安装时构建会自动回落到 npm registry 拉取这些包
   (见下文),因此 DSH 并非严格必需。
 
-## 1. 克隆
+### 1. 克隆
 
 推荐克隆到 `~/.dsh/plugins/cust-model-editor`:
 
@@ -25,9 +49,9 @@ git clone https://github.com/u9521/dsh-advanced-model-editor.git ~/.dsh/plugins/
 cd ~/.dsh/plugins/cust-model-editor
 ```
 
-## 2. 构建
+### 2. 构建
 
-构建产物(`lib/`)不随仓库提交,需要自行构建:
+构建产物(`lib/`)不随源码分支提交,本地开发需要自行构建:
 
 ```sh
 pnpm install
@@ -63,14 +87,13 @@ pnpm run build
 pnpm test
 ```
 
-## 3. 安装
+### 3. 本地安装
 
 ```sh
 dsh plugin --profile web add ~/.dsh/plugins/cust-model-editor
 ```
 
-然后**重启 web**(`dsh web`)并**硬刷新浏览器**(Cmd+Shift+R)。插件以**模型高级设置**
-出现在设置页。
+然后**重启 web**(`dsh web`)并**硬刷新浏览器**(Cmd+Shift+R)。
 
 ## 开发与维护命令
 
@@ -84,7 +107,7 @@ dsh plugin --profile web add ~/.dsh/plugins/cust-model-editor
 | `pnpm run sync` | 从上游同步内置的 DSH 客户端打包预设(`--check` 或 `--yes`) |
 | `node scripts/link-dsh.mjs` | 链接 `@deepseek-ai/dsh-client-*` 包(全局 DSH 安装,或 npm registry 回落);`build`/`check` 在缺失时自动运行 |
 
-## 升级 / 卸载
+## 本地源码升级 / 卸载
 
 ```sh
 # 拉取新代码,重新构建,再重新 add

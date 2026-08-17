@@ -7,7 +7,31 @@ custom provider namespace (`llm-pi-ai`) and the official provider namespace
 reasoning/thinking options, headers, retry policy and more, with the same validation
 and conflict rules as the official settings UI.
 
-## Prerequisites
+## Quick Install (Recommended / One-Line)
+
+Install directly from the GitHub `dist` branch (pre-built by CI, no manual clone or compilation required):
+
+```sh
+dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
+```
+
+Then **restart web** (`dsh web`) and **hard-refresh** your browser (Cmd+Shift+R). The plugin appears as **Advanced Model Settings** in Settings.
+
+### Upgrade & Uninstall
+
+```sh
+# upgrade to the latest dist release
+dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
+
+# uninstall
+dsh plugin --profile web remove @local/dsh-advanced-model-editor
+```
+
+---
+
+## Local Development & Manual Build
+
+### Prerequisites
 
 - **pnpm installed** — `npx get-pnpm` (see https://pnpm.io/installation; alternatives:
   `corepack enable` or `npm install -g pnpm`). Required both for building and because
@@ -19,7 +43,7 @@ and conflict rules as the official settings UI.
   running harness exactly. When it is absent, the build falls back to pulling those
   packages from the npm registry (see below) — no DSH install is strictly required.
 
-## 1. Clone
+### 1. Clone
 
 Clone the repository into the recommended location:
 
@@ -28,9 +52,9 @@ git clone https://github.com/u9521/dsh-advanced-model-editor.git ~/.dsh/plugins/
 cd ~/.dsh/plugins/cust-model-editor
 ```
 
-## 2. Build
+### 2. Build
 
-The build output (`lib/`) is not committed — build it yourself:
+The build output (`lib/`) is not committed to the source branch — build it yourself for local development:
 
 ```sh
 pnpm install
@@ -70,14 +94,13 @@ Verify the build with:
 pnpm test
 ```
 
-## 3. Install
+### 3. Local Install
 
 ```sh
 dsh plugin --profile web add ~/.dsh/plugins/cust-model-editor
 ```
 
 Then **restart web** (`dsh web`) and **hard-refresh** the browser (Cmd+Shift+R).
-The plugin appears as **Advanced Model Settings** (模型高级设置) in Settings.
 
 ## Development & Maintenance Commands
 
@@ -91,7 +114,7 @@ The plugin appears as **Advanced Model Settings** (模型高级设置) in Settin
 | `pnpm run sync` | Sync the vendored DSH client-bundle preset from upstream (`--check` or `--yes`) |
 | `node scripts/link-dsh.mjs` | Link the `@deepseek-ai/dsh-client-*` packages (global DSH install, or npm-registry fallback); auto-run by `build`/`check` when missing |
 
-## Upgrade / Uninstall
+## Local Source Upgrade / Uninstall
 
 ```sh
 # pull new sources, rebuild, then re-add
