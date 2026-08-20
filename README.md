@@ -7,6 +7,8 @@ custom provider namespace (`llm-pi-ai`) and the official provider namespace
 reasoning/thinking options, headers, retry policy and more, with the same validation
 and conflict rules as the official settings UI.
 
+![Screenshot](docs/pics/screenshot.png)
+
 ## Quick Install (Recommended / One-Line)
 
 Install directly from the GitHub `dist` branch (pre-built by CI, no manual clone or compilation required):

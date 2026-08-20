@@ -27,8 +27,10 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  readlinkSync,
   realpathSync,
   symlinkSync,
+  unlinkSync,
 } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -110,9 +112,18 @@ function resolveDshPackage() {
 }
 
 function link(source, target) {
-  if (existsSync(target)) {
-    if (lstatSync(target).isSymbolicLink()) return false
-    throw new Error(`Refusing to overwrite non-symlink ${target}`)
+  try {
+    const stat = lstatSync(target)
+    if (stat.isSymbolicLink()) {
+      try {
+        if (readlinkSync(target) === source) return false
+      } catch {}
+      unlinkSync(target)
+    } else {
+      throw new Error(`Refusing to overwrite non-symlink ${target}`)
+    }
+  } catch (err) {
+    if (err.code !== 'ENOENT') throw err
   }
   mkdirSync(dirname(target), { recursive: true })
   symlinkSync(source, target, 'dir')
@@ -244,13 +255,18 @@ if (fallbackActive()) {
 const dshModules = join(dsh, 'node_modules')
 const scope = join(root, 'node_modules', '@deepseek-ai')
 for (const name of SCOPED) {
-  const source = join(dshModules, '@deepseek-ai', name)
+  let source = join(dshModules, '@deepseek-ai', name)
+  if (!existsSync(source)) {
+    source = join(dirname(dsh), name)
+  }
   if (!existsSync(source))
     throw new Error(`Global DSH lacks @deepseek-ai/${name} (${source})`)
   if (link(source, join(scope, name)))
     console.log(`linked @deepseek-ai/${name}`)
 }
-const reactSource = join(dshModules, 'react')
+const reactSource = existsSync(join(dshModules, 'react'))
+  ? join(dshModules, 'react')
+  : join(dirname(dirname(dsh)), 'react')
 if (existsSync(reactSource)) {
   if (link(reactSource, join(root, 'node_modules', 'react')))
     console.log('linked react')

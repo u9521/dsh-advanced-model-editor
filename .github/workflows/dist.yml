@@ -51,24 +51,46 @@ jobs:
         run: pnpm test
 
       - name: Prepare minimal dist package
+        env:
+          GITHUB_REPO: ${{ github.repository }}
         run: |
           rm -rf .dist
           mkdir -p .dist/lib
 
-          # Copy compiled outputs
+          # Copy minimal required runtime files
           cp -r lib/* .dist/lib/
+          cp cordis.patch.yml LICENSE .dist/
 
-          # Copy root metadata and docs
-          for file in cordis.patch.yml README.md README.zh.md LICENSE; do
-            if [ -f "$file" ]; then
-              cp "$file" .dist/
-            fi
-          done
-
-          # Generate sanitized production package.json
+          # Generate minimal dist README and sanitized production package.json
           node -e '
             const fs = require("node:fs");
             const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+            const repo = process.env.GITHUB_REPO || "u9521/dsh-advanced-model-editor";
+
+            const readme = [
+              "# dsh-advanced-model-editor",
+              "",
+              "Pre-built distribution package for **dsh-advanced-model-editor** (Advanced Model Settings plugin for DeepSeek Harness WebUI).",
+              "",
+              "For full documentation, screenshots, and source code, visit the GitHub repository:",
+              "",
+              `👉 **https://github.com/${repo}**`,
+              "",
+              "## Quick Install",
+              "",
+              "```sh",
+              `dsh plugin --profile web add github:${repo}#dist`,
+              "```",
+              "",
+              "Then restart web (`dsh web`) and hard-refresh your browser (Cmd+Shift+R).",
+              "",
+              "## License",
+              "",
+              "[MIT](LICENSE)",
+              "",
+            ].join("\n");
+            fs.writeFileSync(".dist/README.md", readme);
+
             const distPkg = {
               name: pkg.name,
               version: pkg.version,
@@ -77,7 +99,7 @@ jobs:
               license: pkg.license,
               main: pkg.main,
               types: pkg.types,
-              files: pkg.files,
+              files: ["lib", "cordis.patch.yml", "README.md", "LICENSE"],
               engines: pkg.engines,
               dsh: pkg.dsh,
               keywords: pkg.keywords,
