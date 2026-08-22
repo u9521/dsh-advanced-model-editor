@@ -1,30 +1,44 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-import * as core from './core.ts'
-import * as providers from './providers.ts'
+import { LOCALE_NS, OFFICIAL_NS, SETTINGS_NS } from './constants.ts'
+import {
+  AddBuiltInProvider,
+  CreateCustomProvider,
+  OfficialProviderEditor,
+  ProviderEditor,
+} from './providers/index.ts'
+import { hasUserProfile } from './state.ts'
+import type {
+  ModelApi,
+  ProviderRow,
+  SettingsNamespaceView,
+  Translator,
+} from './types.ts'
+import { responseMessage, setTranslator, tr, valueOf } from './utils.ts'
 
 export interface AdvancedModelsPageProps {
-  api: core.ModelApi
+  api: ModelApi
   retryLater: (callback: () => void, delay: number) => () => void
   timeout: (callback: () => void, delay: number) => () => void
   subscribe: (refresh: () => void) => () => void
 }
 
 export interface LocaleService {
-  bind(namespace: string): core.Translator
+  bind(namespace: string): Translator
   subscribe(callback: () => void): () => void
 }
 
 export interface LocalePageProps {
   locale: LocaleService
-  api: core.ModelApi
+  api: ModelApi
   retryLater: (callback: () => void, delay: number) => () => void
   timeout: (callback: () => void, delay: number) => () => void
   subscribe: (refresh: () => void) => () => void
 }
 
 const e = React.createElement
-const NS = core.LOCALE_NS
+const NS = LOCALE_NS
+
 export function AdvancedModelsPage({
   api,
   retryLater,
@@ -34,10 +48,10 @@ export function AdvancedModelsPage({
   const [state, setState] = React.useState<{
     status: 'idle' | 'loading' | 'ready' | 'waiting' | 'error'
     writable: boolean
-    rows: core.ProviderRow[]
-    catalogRows: core.ProviderRow[]
-    namespace: core.SettingsNamespaceView | undefined
-    officialNamespace: core.SettingsNamespaceView | undefined
+    rows: ProviderRow[]
+    catalogRows: ProviderRow[]
+    namespace: SettingsNamespaceView | undefined
+    officialNamespace: SettingsNamespaceView | undefined
     error: string
   }>({
     status: 'idle',
@@ -62,7 +76,7 @@ export function AdvancedModelsPage({
         api.llm.providers({}),
         api.settings.describe({}),
       ])
-      const providerList = core.valueOf<{
+      const providerList = valueOf<{
         providers: Array<{
           provider: string
           displayName: string
@@ -72,15 +86,15 @@ export function AdvancedModelsPage({
           declared?: boolean
         }>
       }>(providerResponse).providers
-      const settings = core.valueOf<{
-        namespaces: core.SettingsNamespaceView[]
+      const settings = valueOf<{
+        namespaces: SettingsNamespaceView[]
         writable?: boolean
       }>(settingsResponse)
       const namespace = settings.namespaces.find(
-        (entry) => entry.ns === core.SETTINGS_NS,
+        (entry) => entry.ns === SETTINGS_NS,
       )
       const officialNamespace = settings.namespaces.find(
-        (entry) => entry.ns === core.OFFICIAL_NS,
+        (entry) => entry.ns === OFFICIAL_NS,
       )
       if (!namespace || !officialNamespace) {
         setState((current) => ({
@@ -91,11 +105,11 @@ export function AdvancedModelsPage({
         return false
       }
       const catalogRows = providerList
-        .filter((entry) => entry.settingsNs === core.SETTINGS_NS)
+        .filter((entry) => entry.settingsNs === SETTINGS_NS)
         .map((entry) => ({
           ...entry,
           api,
-          userAdded: core.hasUserProfile(namespace, entry.settingsPath),
+          userAdded: hasUserProfile(namespace, entry.settingsPath),
         }))
       setState({
         status: 'ready',
@@ -111,7 +125,7 @@ export function AdvancedModelsPage({
       setState((current) => ({
         ...current,
         status: 'error',
-        error: core.responseMessage(error),
+        error: responseMessage(error),
       }))
       return true
     }
@@ -133,7 +147,7 @@ export function AdvancedModelsPage({
       dispose()
     }
   }, [])
-  const editorProps = (row: core.ProviderRow) => ({
+  const editorProps = (row: ProviderRow) => ({
     key: row.provider,
     row: { ...row, userAdded: true },
     namespace: state.namespace!,
@@ -147,7 +161,7 @@ export function AdvancedModelsPage({
     e(
       'div',
       { className: 'dsh-ma-header' },
-      e('h2', { className: 'dsh-ma-title' }, core.tr('title')),
+      e('h2', { className: 'dsh-ma-title' }, tr('title')),
       e(
         'div',
         { className: 'dsh-ma-toolbar' },
@@ -157,8 +171,8 @@ export function AdvancedModelsPage({
             type: 'button',
             className: 'dsh-ma-button',
             disabled: state.status === 'loading',
-            title: core.tr('refresh'),
-            'aria-label': core.tr('refresh'),
+            title: tr('refresh'),
+            'aria-label': tr('refresh'),
             onClick: load,
           },
           e(primitives.IconRefreshOutline16, { size: 16 }),
@@ -175,7 +189,7 @@ export function AdvancedModelsPage({
               ),
           },
           e(primitives.IconPlusOutline16, { size: 14 }),
-          core.tr('addBuiltIn'),
+          tr('addBuiltIn'),
         ),
         e(
           'button',
@@ -189,18 +203,18 @@ export function AdvancedModelsPage({
               ),
           },
           e(primitives.IconPlusOutline16, { size: 14 }),
-          core.tr('addCustom'),
+          tr('addCustom'),
         ),
       ),
     ),
     !state.writable && state.status === 'ready'
-      ? e('div', { className: 'dsh-ma-notice' }, core.tr('readOnly'))
+      ? e('div', { className: 'dsh-ma-notice' }, tr('readOnly'))
       : null,
     state.status === 'loading'
-      ? e('p', { className: 'dsh-ma-status' }, core.tr('loading'))
+      ? e('p', { className: 'dsh-ma-status' }, tr('loading'))
       : null,
     state.status === 'waiting'
-      ? e('p', { className: 'dsh-ma-status' }, core.tr('waiting'))
+      ? e('p', { className: 'dsh-ma-status' }, tr('waiting'))
       : null,
     state.status === 'error'
       ? e(
@@ -210,7 +224,7 @@ export function AdvancedModelsPage({
         )
       : null,
     createMode === 'builtin' && state.namespace
-      ? e(providers.AddBuiltInProvider, {
+      ? e(AddBuiltInProvider, {
           namespace: state.namespace,
           rows: state.catalogRows,
           api,
@@ -220,7 +234,7 @@ export function AdvancedModelsPage({
         })
       : null,
     createMode === 'custom' && state.namespace
-      ? e(providers.CreateCustomProvider, {
+      ? e(CreateCustomProvider, {
           namespace: state.namespace,
           rows: state.catalogRows,
           api,
@@ -232,13 +246,9 @@ export function AdvancedModelsPage({
     e(
       'div',
       { className: 'dsh-ma-list' },
-      e(
-        'h3',
-        { className: 'dsh-ma-section-title' },
-        core.tr('builtInProviders'),
-      ),
+      e('h3', { className: 'dsh-ma-section-title' }, tr('builtInProviders')),
       state.officialNamespace
-        ? e(providers.OfficialProviderEditor, {
+        ? e(OfficialProviderEditor, {
             namespace: state.officialNamespace!,
             api,
             writable: state.writable,
@@ -247,20 +257,16 @@ export function AdvancedModelsPage({
         : null,
       state.rows
         .filter((row) => row.declared !== true)
-        .map((row) => e(providers.ProviderEditor, editorProps(row))),
+        .map((row) => e(ProviderEditor, editorProps(row))),
       state.rows.some((row) => row.declared === true)
-        ? e(
-            'h3',
-            { className: 'dsh-ma-section-title' },
-            core.tr('customProviders'),
-          )
+        ? e('h3', { className: 'dsh-ma-section-title' }, tr('customProviders'))
         : null,
       state.rows
         .filter((row) => row.declared === true)
-        .map((row) => e(providers.ProviderEditor, editorProps(row))),
+        .map((row) => e(ProviderEditor, editorProps(row))),
     ),
     state.status === 'ready' && state.rows.length === 0
-      ? e('p', { className: 'dsh-ma-status' }, core.tr('empty'))
+      ? e('p', { className: 'dsh-ma-status' }, tr('empty'))
       : null,
   )
 }
@@ -270,6 +276,6 @@ export function LocalePage({ locale, ...props }: LocalePageProps) {
     () => locale.subscribe(() => setRevision((value) => value + 1)),
     [locale],
   )
-  core.setTranslator(locale.bind(NS))
+  setTranslator(locale.bind(NS))
   return e(AdvancedModelsPage, props)
 }

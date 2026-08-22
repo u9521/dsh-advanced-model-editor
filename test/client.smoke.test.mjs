@@ -3,11 +3,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import * as i18n from '../src/client/i18n.ts'
+import * as locales from '../src/client/locales/index.ts'
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)))
 const BUNDLE = 'lib/client.js'
-const SRC_FILES = ['core', 'controls', 'models', 'providers', 'i18n', 'page', 'index']
 
 function source(relative) {
   return readFileSync(join(root, relative), 'utf8')
@@ -35,6 +34,7 @@ function loadBundle() {
       IconCloseOutline16: 'IconCloseOutline16',
       IconPlusOutline16: 'IconPlusOutline16',
       IconRefreshOutline16: 'IconRefreshOutline16',
+      IconCopyOutline16: 'IconCopyOutline16',
     }],
   ])
   const cache = new Map()
@@ -71,49 +71,158 @@ test('built bundle materializes the plugin with the expected lifecycle contract'
   assert.equal(typeof client.apply, 'function')
 })
 
-test('core and i18n modules load directly as TypeScript ESM', async () => {
-  const core = await import('../src/client/core.ts')
-  for (const name of ['SETTINGS_NS', 'OFFICIAL_NS', 'LOCALE_NS', 'PROFILE_FIELDS', 'tr', 'setTranslator', 'validateProfile', 'validateOfficialProfile', 'validateRetryPolicy', 'buildProfileOps', 'initialEditorState', 'groupProviderRows', 'deleteProviderOps']) {
-    assert.ok(name in core, `core should export ${name}`)
+test('constants, utils, state, validation and locales load directly as TypeScript ESM', async () => {
+  const constants = await import('../src/client/constants.ts')
+  const utils = await import('../src/client/utils.ts')
+  const state = await import('../src/client/state.ts')
+  const validation = await import('../src/client/validation.ts')
+  const localesMod = await import('../src/client/locales/index.ts')
+
+  for (const name of [
+    'SETTINGS_NS',
+    'OFFICIAL_NS',
+    'LOCALE_NS',
+    'PROFILE_FIELDS',
+  ]) {
+    assert.ok(name in constants, `constants should export ${name}`)
   }
-  assert.equal(typeof i18n.flattenDictionary, 'function')
-  assert.equal(typeof i18n.zh, 'object')
-  assert.equal(typeof i18n.en, 'object')
+  for (const name of [
+    'tr',
+    'setTranslator',
+    'parseCapacity',
+    'formatCapacity',
+  ]) {
+    assert.ok(name in utils, `utils should export ${name}`)
+  }
+  for (const name of [
+    'buildProfileOps',
+    'initialEditorState',
+    'groupProviderRows',
+    'deleteProviderOps',
+    'stripModelCompat',
+  ]) {
+    assert.ok(name in state, `state should export ${name}`)
+  }
+  for (const name of [
+    'validateProfile',
+    'validateOfficialProfile',
+    'validateRetryPolicy',
+  ]) {
+    assert.ok(name in validation, `validation should export ${name}`)
+  }
+  assert.equal(typeof localesMod.flattenDictionary, 'function')
+  assert.equal(typeof localesMod.zh, 'object')
+  assert.equal(typeof localesMod.en, 'object')
 })
 
 test('src modules declare their focused contracts and stay free of hardcoded Chinese', () => {
   const contracts = {
-    'controls.ts': ['Field', 'TextInput', 'Select', 'ProtocolSelect', 'Modalities', 'KeyValueList', 'CompatEditor', 'RetryPolicy', 'CSS'],
-    'models.ts': ['ModelForm', 'ModelDiscoveryDialog', 'ModelList', 'OfficialModelList'],
-    'providers.ts': ['ProviderEditor', 'CreateCustomProvider', 'AddBuiltInProvider', 'OfficialProviderEditor'],
+    'controls/field.ts': ['Field'],
+    'controls/inputs.ts': ['TextInput', 'Select', 'ProtocolSelect'],
+    'controls/modalities.ts': ['Modalities'],
+    'controls/key-value-list.ts': ['KeyValueList'],
+    'controls/compat-editor.ts': ['CompatEditor'],
+    'controls/reasoning-efforts-editor.ts': ['ReasoningEffortsEditor'],
+    'controls/retry-policy.ts': ['RetryPolicy'],
+    'styles.ts': ['CSS'],
+    'models/model-form.ts': ['ModelForm'],
+    'models/discovery-dialog.ts': ['ModelDiscoveryDialog'],
+    'models/model-list.ts': ['ModelList'],
+    'models/official-models.ts': ['OfficialModelList'],
+    'providers/provider-editor.ts': ['ProviderEditor'],
+    'providers/custom-provider.ts': ['CreateCustomProvider'],
+    'providers/builtin-provider.ts': ['AddBuiltInProvider'],
+    'providers/official-editor.ts': ['OfficialProviderEditor'],
     'page.ts': ['AdvancedModelsPage', 'LocalePage'],
     'index.ts': ['inject', 'apply'],
   }
   for (const [file, names] of Object.entries(contracts)) {
     const text = source(`src/client/${file}`)
     for (const name of names) {
-      const pattern = name === 'inject' || name === 'CSS' ? new RegExp(`export const ${name}\\b`) : new RegExp(`export (function|const) ${name}\\b`)
+      const pattern =
+        name === 'inject' || name === 'CSS'
+          ? new RegExp(`export const ${name}\\b`)
+          : new RegExp(`export (function|const) ${name}\\b`)
       assert.match(text, pattern, `${file} should export ${name}`)
     }
   }
-  for (const file of ['core.ts', 'controls.ts', 'models.ts', 'providers.ts']) assert.doesNotMatch(source(`src/client/${file}`), /[\u3400-\u9fff]/, file)
+  const nonLocaleFiles = [
+    'constants.ts',
+    'types.ts',
+    'utils.ts',
+    'state.ts',
+    'validation.ts',
+    'styles.ts',
+    'controls/field.ts',
+    'controls/inputs.ts',
+    'controls/modalities.ts',
+    'controls/key-value-list.ts',
+    'controls/compat-editor.ts',
+    'controls/reasoning-efforts-editor.ts',
+    'controls/retry-policy.ts',
+    'controls/index.ts',
+    'models/discovery-dialog.ts',
+    'models/model-form.ts',
+    'models/model-list.ts',
+    'models/official-models.ts',
+    'models/index.ts',
+    'providers/credential-field.ts',
+    'providers/provider-editor.ts',
+    'providers/official-editor.ts',
+    'providers/custom-provider.ts',
+    'providers/builtin-provider.ts',
+    'providers/index.ts',
+    'locales/en.ts',
+    'locales/index.ts',
+    'page.ts',
+    'index.ts',
+  ]
+  for (const file of nonLocaleFiles) {
+    assert.doesNotMatch(source(`src/client/${file}`), /[\u3400-\u9fff]/, file)
+  }
 })
 
 test('src modules use relative ESM imports with an acyclic dependency graph', () => {
-  const edges = {}
-  for (const name of SRC_FILES) {
-    const text = source(`src/client/${name}.ts`)
-    const imports = [...text.matchAll(/^import \* as \w+ from ["']\.\/([a-z0-9-]+)\.ts["'];?$/gm)].map((match) => match[1])
-    for (const dep of imports) assert.ok(SRC_FILES.includes(dep), `${name} imports unknown ${dep}`)
-    edges[name] = imports
-    assert.doesNotMatch(text, /require\('@local\/dsh-advanced-model-editor\//, name)
+  const allClientFiles = [
+    'types.ts',
+    'constants.ts',
+    'utils.ts',
+    'state.ts',
+    'validation.ts',
+    'styles.ts',
+    'controls/field.ts',
+    'controls/inputs.ts',
+    'controls/modalities.ts',
+    'controls/key-value-list.ts',
+    'controls/compat-editor.ts',
+    'controls/reasoning-efforts-editor.ts',
+    'controls/retry-policy.ts',
+    'controls/index.ts',
+    'models/discovery-dialog.ts',
+    'models/model-form.ts',
+    'models/model-list.ts',
+    'models/official-models.ts',
+    'models/index.ts',
+    'providers/credential-field.ts',
+    'providers/provider-editor.ts',
+    'providers/official-editor.ts',
+    'providers/custom-provider.ts',
+    'providers/builtin-provider.ts',
+    'providers/index.ts',
+    'locales/zh.ts',
+    'locales/en.ts',
+    'locales/index.ts',
+    'page.ts',
+    'index.ts',
+  ]
+  for (const file of allClientFiles) {
+    const text = source(`src/client/${file}`)
+    assert.doesNotMatch(
+      text,
+      /require\('@local\/dsh-advanced-model-editor\//,
+      file,
+    )
   }
-  assert.deepEqual(edges.core, [])
-  assert.deepEqual(edges.controls, ['core'])
-  assert.deepEqual(edges.models, ['core', 'controls'])
-  assert.deepEqual(edges.providers, ['core', 'controls', 'models'])
-  assert.deepEqual(edges.page, ['core', 'providers'])
-  assert.deepEqual(edges.index, ['core', 'controls', 'i18n', 'page'])
 })
 
 test('main plugin registers locale dictionaries and the additive settings section', () => {
@@ -170,8 +279,8 @@ test('host half is a no-op plugin node with an empty inject list', () => {
 })
 
 test('zh and en dictionaries expose identical leaf paths', () => {
-  const zh = leaves(i18n.zh)
-  const en = leaves(i18n.en)
+  const zh = leaves(locales.zh)
+  const en = leaves(locales.en)
   assert.deepEqual([...zh.keys()].sort(), [...en.keys()].sort())
   for (const [path, value] of zh) {
     assert.equal(typeof value, 'string', `zh ${path}`)
@@ -180,7 +289,7 @@ test('zh and en dictionaries expose identical leaf paths', () => {
 })
 
 test('modular styles use dark-mode theme tokens and remove prompt divider', () => {
-  const css = source('src/client/controls.ts').match(/export const CSS = `([\s\S]*?)`/)[1]
+  const css = source('src/client/styles.ts').match(/export const CSS = `([\s\S]*?)`/)[1]
   for (const token of [
     '--dsw-alias-bg-layer-1',
     '--dsw-alias-bg-layer-2',

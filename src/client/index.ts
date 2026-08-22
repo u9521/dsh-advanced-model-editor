@@ -1,23 +1,24 @@
 import * as React from 'react'
-import * as core from './core.ts'
-import * as controls from './controls.ts'
-import * as i18n from './i18n.ts'
+import { LOCALE_NS, OFFICIAL_NS, SETTINGS_NS } from './constants.ts'
+import { en, flattenDictionary, zh } from './locales/index.ts'
 import * as page from './page.ts'
+import { CSS } from './styles.ts'
+import { setTranslator, tr } from './utils.ts'
 
 const e = React.createElement
-const NS = core.LOCALE_NS
+const NS = LOCALE_NS
 
 export const inject = ['slots', 'connection', 'remote', 'timer', 'locale']
 export function apply(ctx: any) {
   ctx.effect(
     () =>
       ctx.locale.register(NS, {
-        zh: i18n.flattenDictionary(i18n.zh),
-        en: i18n.flattenDictionary(i18n.en),
+        zh: flattenDictionary(zh),
+        en: flattenDictionary(en),
       }),
     'model-advanced: locale',
   )
-  const bindTranslator = () => core.setTranslator(ctx.locale.bind(NS))
+  const bindTranslator = () => setTranslator(ctx.locale.bind(NS))
   bindTranslator()
   ctx.effect(
     () => ctx.locale.subscribe(bindTranslator),
@@ -26,7 +27,7 @@ export function apply(ctx: any) {
   ctx.effect(() => {
     const style = document.createElement('style')
     style.dataset.plugin = '@local/dsh-advanced-model-editor'
-    style.textContent = controls.CSS
+    style.textContent = CSS
     document.head.appendChild(style)
     return () => style.remove()
   }, 'model-advanced: styles')
@@ -46,7 +47,7 @@ export function apply(ctx: any) {
     return svg
   }
   const swapNavIcon = () => {
-    const label = core.tr('nav')
+    const label = tr('nav')
     for (const button of document.querySelectorAll('button')) {
       const span = button.querySelector('span')
       if (!span || span.textContent !== label) continue
@@ -77,8 +78,7 @@ export function apply(ctx: any) {
   const subscribe = (refresh: () => void) => {
     const disposers = [
       ctx.remote.$on('settings/document-updated', (namespace: unknown) => {
-        if (namespace === core.SETTINGS_NS || namespace === core.OFFICIAL_NS)
-          refresh()
+        if (namespace === SETTINGS_NS || namespace === OFFICIAL_NS) refresh()
       }),
       ctx.remote.$on('llm/adapters-updated', refresh),
       ctx.on('connection/reset', refresh),
@@ -93,7 +93,7 @@ export function apply(ctx: any) {
         name: 'settings.section',
         id: 'model-advanced',
         order: 11,
-        label: () => core.tr('nav'),
+        label: () => tr('nav'),
       },
       function Page() {
         return e(page.LocalePage, {
