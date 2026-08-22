@@ -10,28 +10,14 @@
  *   2. `tsdown -c tsdown.config.mjs` (lib/index.js + lib/client.js)
  *
  * `--check` runs tsc --noEmit instead of emitting and bundling.
- *
- * Before type-checking, the @deepseek-ai platform packages must be resolvable
- * in node_modules. When they are missing, scripts/link-dsh.mjs is run: it
- * symlinks them from a globally installed DSH, or — if no DSH install can be
- * found — pulls the packages from the configured npm registry.
  */
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync } from 'node:fs'
+import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const CHECK_ONLY = process.argv.includes('--check')
-
-// dsh.client packages tsc must resolve (mirrors scripts/link-dsh.mjs).
-const PLATFORM_PACKAGES = [
-  'dsh-api-remotes',
-  'dsh-client-locale',
-  'dsh-client-runtime',
-  'dsh-client-ui-primitives',
-  'dsh-client-ui-settings',
-]
 
 /** Run a binary with cwd=root, inheriting stdio; exit the process on failure. */
 function run(command, args) {
@@ -40,16 +26,6 @@ function run(command, args) {
 }
 
 mkdirSync(join(root, 'lib'), { recursive: true })
-if (
-  PLATFORM_PACKAGES.some(
-    (name) => !existsSync(join(root, 'node_modules', '@deepseek-ai', name)),
-  )
-) {
-  console.log(
-    'build: @deepseek-ai platform packages missing — running scripts/link-dsh.mjs',
-  )
-  run(process.execPath, [join(root, 'scripts', 'link-dsh.mjs')])
-}
 const args = ['-p', 'tsconfig.json']
 if (CHECK_ONLY) args.push('--noEmit', '--pretty', 'false')
 run(process.execPath, [

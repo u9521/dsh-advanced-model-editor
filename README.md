@@ -39,11 +39,6 @@ dsh plugin --profile web remove @local/dsh-advanced-model-editor
   `corepack enable` or `npm install -g pnpm`). Required both for building and because
   `dsh plugin --profile web add` forwards to pnpm internally.
 - **Node.js** `^22.19 || >=24`.
-- **DSH installed globally** *(recommended)* — `npm install -g @deepseek-ai/dsh`. When
-  present, the build links the installed DSH's runtime packages
-  (`@deepseek-ai/dsh-client-*`, `react`) into this project, so types always match the
-  running harness exactly. When it is absent, the build falls back to pulling those
-  packages from the npm registry (see below) — no DSH install is strictly required.
 
 ### 1. Clone
 
@@ -67,28 +62,6 @@ The official DSH client-bundle preset is vendored under
 `external/deepseek-harness/packages/client/`, so no DSH source checkout is needed:
 `pnpm run build` runs `tsc` (type check + emit `lib/types/`) and `tsdown` (bundle
 `lib/index.js` + `lib/client.js`) with the project's own dependencies.
-
-Before type-checking, `build` ensures the `@deepseek-ai/dsh-client-*` packages are
-resolvable by running `scripts/link-dsh.mjs`, which:
-
-1. **Global DSH install found** — symlinks the five packages (plus `react`) from the
-   global `@deepseek-ai/dsh` into `node_modules`, so types match the running harness
-   exactly. `pnpm install` does not remove these links.
-2. **No global DSH install** — falls back to the npm registry: resolves the latest
-   `@deepseek-ai/dsh` release and adds the five packages (published in lockstep with
-   dsh) as `devDependencies`, pinned to that release. Types then track the registry
-   release; to switch back to global-install links later:
-
-   ```sh
-   pnpm remove -D @deepseek-ai/dsh-api-remotes @deepseek-ai/dsh-client-locale \
-     @deepseek-ai/dsh-client-runtime @deepseek-ai/dsh-client-ui-primitives \
-     @deepseek-ai/dsh-client-ui-settings
-   node scripts/link-dsh.mjs
-   ```
-
-   On restricted networks, point pnpm at a reachable mirror (project `.npmrc`,
-   `pnpm config set registry …`) or pass it explicitly:
-   `node scripts/link-dsh.mjs --registry https://registry.npmmirror.com`
 
 Verify the build with:
 
@@ -114,7 +87,6 @@ Then **restart web** (`dsh web`) and **hard-refresh** the browser (Cmd+Shift+R).
 | `pnpm run fmt` | Format source and config files with Prettier |
 | `pnpm run fmt:check` | Check code formatting compliance |
 | `pnpm run sync` | Sync the vendored DSH client-bundle preset from upstream (`--check` or `--yes`) |
-| `node scripts/link-dsh.mjs` | Link the `@deepseek-ai/dsh-client-*` packages (global DSH install, or npm-registry fallback); auto-run by `build`/`check` when missing |
 
 ## Local Source Upgrade / Uninstall
 
