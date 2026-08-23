@@ -54,8 +54,8 @@ jobs:
           rm -rf .dist
           mkdir -p .dist/lib
 
-          # Copy minimal required runtime files
-          cp -r lib/* .dist/lib/
+          # Copy minimal required runtime files (only index.js and client.js; no types or sourcemaps)
+          cp lib/index.js lib/client.js .dist/lib/
           cp cordis.patch.yml LICENSE .dist/
 
           # Generate minimal dist README and sanitized production package.json
@@ -94,13 +94,17 @@ jobs:
               type: pkg.type,
               description: pkg.description,
               license: pkg.license,
-              main: pkg.main,
-              types: pkg.types,
+              main: "./lib/index.js",
               files: ["lib", "cordis.patch.yml", "README.md", "LICENSE"],
               engines: pkg.engines,
               dsh: pkg.dsh,
               keywords: pkg.keywords,
-              exports: pkg.exports,
+              exports: {
+                ".": "./lib/index.js",
+                "./client": "./lib/client.js",
+                "./cordis.patch.yml": "./cordis.patch.yml",
+                "./package.json": "./package.json",
+              },
             };
             if (pkg.repository) distPkg.repository = pkg.repository;
             if (pkg.homepage) distPkg.homepage = pkg.homepage;
@@ -110,9 +114,6 @@ jobs:
             }
             fs.writeFileSync(".dist/package.json", JSON.stringify(distPkg, null, 2) + "\n");
           '
-
-          # Generate minimal .gitignore
-          printf "node_modules/\n.DS_Store\n*.log\n" > .dist/.gitignore
 
       - name: Deploy to dist branch
         if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')) || github.event_name == 'workflow_dispatch'

@@ -303,3 +303,15 @@ test('modular styles use dark-mode theme tokens and remove prompt divider', () =
   assert.match(css, /dsh-ma-delete-confirm \.dsh-ma-actions\{border-top:0/)
 })
 
+test('dist packaging workflow copies only runtime JS and excludes types, maps, and .gitignore', () => {
+  const workflow = source('.github/workflows/dist.yml')
+  // Verifies that only lib/index.js and lib/client.js are copied
+  assert.match(workflow, /cp lib\/index\.js lib\/client\.js \.dist\/lib\//)
+  assert.doesNotMatch(workflow, /cp -r lib\/\* \.dist\/lib\//)
+  // Verifies that no .gitignore is written to .dist
+  assert.doesNotMatch(workflow, /\.dist\/\.gitignore/)
+  // Verifies that dist package.json does not declare types
+  assert.doesNotMatch(workflow, /types:\s*pkg\.types/)
+})
+
+
