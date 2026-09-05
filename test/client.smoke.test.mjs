@@ -67,7 +67,15 @@ test('built bundle keeps a single injection point registering the package', () =
 test('built bundle materializes the plugin with the expected lifecycle contract', () => {
   const { require } = loadBundle()
   const client = require('@local/dsh-advanced-model-editor')
-  assert.deepEqual(client.inject, ['slots', 'connection', 'remote', 'timer', 'locale'])
+  assert.deepEqual(client.inject, [
+    'slots',
+    'locale',
+    'remote',
+    'remote.credentials',
+    'remote.llm',
+    'remote.settings',
+    'timer',
+  ])
   assert.equal(typeof client.apply, 'function')
 })
 
@@ -133,6 +141,7 @@ test('src modules declare their focused contracts and stay free of hardcoded Chi
     'providers/custom-provider.ts': ['CreateCustomProvider'],
     'providers/builtin-provider.ts': ['AddBuiltInProvider'],
     'providers/official-editor.ts': ['OfficialProviderEditor'],
+    'api.ts': ['createModelApi'],
     'page.ts': ['AdvancedModelsPage', 'LocalePage'],
     'index.ts': ['inject', 'apply'],
   }
@@ -153,6 +162,7 @@ test('src modules declare their focused contracts and stay free of hardcoded Chi
     'state.ts',
     'validation.ts',
     'styles.ts',
+    'api.ts',
     'controls/field.ts',
     'controls/inputs.ts',
     'controls/modalities.ts',
@@ -190,6 +200,7 @@ test('src modules use relative ESM imports with an acyclic dependency graph', ()
     'state.ts',
     'validation.ts',
     'styles.ts',
+    'api.ts',
     'controls/field.ts',
     'controls/inputs.ts',
     'controls/modalities.ts',
@@ -238,14 +249,37 @@ test('main plugin registers locale dictionaries and the additive settings sectio
   }
   const ctx = {
     effect: (effect) => effect(),
-    connection: { api: {} },
-    remote: { $on: () => () => {} },
+    remote: {
+      $on: () => () => {},
+      llm: {
+        listProviders: async () => ({ ok: true, value: [] }),
+        listConfigurableProviders: async () => ({ ok: true, value: [] }),
+        discoverModels: async () => ({ ok: true, value: [] }),
+      },
+      settings: {
+        describe: async () => ({
+          ok: true,
+          value: { namespaces: [], writable: true },
+        }),
+        mutate: async () => ({ ok: true, value: {} }),
+      },
+      credentials: {
+        describe: async () => ({ ok: true, value: {} }),
+        set: async () => ({ ok: true }),
+        unset: async () => ({ ok: true }),
+      },
+    },
     timer: { timeout: () => () => {} },
     locale,
     on: () => () => {},
     slots: {
-      inject: (name, callback) => { injected = { name, callback } },
-      register: (options, component) => { registered = { options, component }; return () => {} },
+      inject: (name, callback) => {
+        injected = { name, callback }
+      },
+      register: (options, component) => {
+        registered = { options, component }
+        return () => {}
+      },
     },
   }
   global.document = {

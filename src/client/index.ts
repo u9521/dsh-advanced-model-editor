@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { createModelApi } from './api.ts'
 import { LOCALE_NS, OFFICIAL_NS, SETTINGS_NS } from './constants.ts'
 import { en, flattenDictionary, zh } from './locales/index.ts'
 import * as page from './page.ts'
@@ -8,7 +9,15 @@ import { setTranslator, tr } from './utils.ts'
 const e = React.createElement
 const NS = LOCALE_NS
 
-export const inject = ['slots', 'connection', 'remote', 'timer', 'locale']
+export const inject = [
+  'slots',
+  'locale',
+  'remote',
+  'remote.credentials',
+  'remote.llm',
+  'remote.settings',
+  'timer',
+]
 export function apply(ctx: any) {
   ctx.effect(
     () =>
@@ -80,6 +89,7 @@ export function apply(ctx: any) {
       ctx.remote.$on('settings/document-updated', (namespace: unknown) => {
         if (namespace === SETTINGS_NS || namespace === OFFICIAL_NS) refresh()
       }),
+      ctx.remote.$on('credentials/reference-updated', refresh),
       ctx.remote.$on('llm/adapters-updated', refresh),
       ctx.on('connection/reset', refresh),
     ]
@@ -98,7 +108,7 @@ export function apply(ctx: any) {
       function Page() {
         return e(page.LocalePage, {
           locale: ctx.locale,
-          api: ctx.connection.api,
+          api: createModelApi(ctx),
           retryLater: ctx.timer.timeout.bind(ctx.timer),
           timeout: ctx.timer.timeout.bind(ctx.timer),
           subscribe,

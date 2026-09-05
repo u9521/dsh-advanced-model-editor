@@ -1,11 +1,6 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-import {
-  CapacityInput,
-  Modalities,
-  Select,
-  TextInput,
-} from '../controls/index.ts'
+import { CapacityInput, Modalities, TextInput } from '../controls/index.ts'
 import type { Modality, ModelProfile } from '../types.ts'
 import { clone, tr } from '../utils.ts'
 
@@ -23,6 +18,7 @@ function setField<T extends object>(
   value: unknown,
 ): T {
   const next = clone({ ...(source || {}) }) as Record<string, unknown>
+  delete next.imageDetail
   if (value === undefined) delete next[field]
   else next[field] = clone(value)
   return next as T
@@ -220,8 +216,8 @@ export function OfficialModelList({
                 if (!nextHasImage) {
                   delete nextModel.imagePixelBudget
                   delete nextModel.imageMaxBytes
-                  delete nextModel.imageDetail
                 }
+                delete (nextModel as Record<string, unknown>).imageDetail
                 delete nextModel.input
                 onChange(
                   models.map((item, itemIndex) =>
@@ -238,33 +234,11 @@ export function OfficialModelList({
                 e(
                   'span',
                   { className: 'dsh-ma-field-label' },
-                  tr('models.field.imageDetail'),
-                ),
-                e(Select, {
-                  value: model.imageDetail,
-                  disabled,
-                  choices: [
-                    { value: 'auto', labelKey: 'option.imageDetail.auto' },
-                    { value: 'low', labelKey: 'option.imageDetail.low' },
-                  ],
-                  allowUnset: true,
-                  unsetKey: 'controls.select.unset',
-                  onChange: (nextValue) =>
-                    update(index, 'imageDetail', nextValue),
-                }),
-              )
-            : null,
-          hasImage
-            ? e(
-                'label',
-                { className: 'dsh-ma-field' },
-                e(
-                  'span',
-                  { className: 'dsh-ma-field-label' },
                   tr('models.field.imagePixelBudget'),
                 ),
                 e(CapacityInput, {
                   value: model.imagePixelBudget,
+                  allowLow: true,
                   disabled,
                   placeholderKey: 'placeholder.imagePixelBudget',
                   ariaLabelKey: 'models.field.imagePixelBudget',

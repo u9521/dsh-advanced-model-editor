@@ -70,13 +70,13 @@ export const THINKING_LEVELS: ThinkingLevel[] = [
 
 export const BUDGET_LEVELS: BudgetLevel[] = ['minimal', 'low', 'medium', 'high']
 export const MODALITIES: Modality[] = ['text', 'image']
-export const IMAGE_DETAILS: string[] = ['auto', 'low']
 
 export const THINKING_FORMATS: string[] = [
   'openai',
   'deepseek',
   'openrouter',
   'together',
+  'baseten',
   'zai',
   'qwen',
   'chat-template',
@@ -99,11 +99,15 @@ export const PROTOCOL_COMPAT_FIELDS: Record<string, string[]> = {
     'supportsDeveloperRole',
     'supportsStore',
     'supportsUsageInStreaming',
+    'supportsFinishReason',
     'maxTokensField',
     'requiresToolResultName',
     'requiresAssistantAfterToolResult',
     'requiresThinkingAsText',
     'requiresReasoningContentOnAssistantMessages',
+    'chatTemplateKwargs',
+    'chatTemplateArgs',
+    'supportsThinkingTokenBudget',
     'supportsStrictMode',
     'cacheControlFormat',
     'supportsLongCacheRetention',

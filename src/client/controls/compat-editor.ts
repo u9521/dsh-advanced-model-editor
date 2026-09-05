@@ -157,6 +157,10 @@ export function CompatEditor(props: CompatEditorProps) {
         'supportsUsageInStreaming',
         'controls.compat.supportsUsageInStreaming',
       ),
+      boolSelect(
+        'supportsFinishReason',
+        'controls.compat.supportsFinishReason',
+      ),
       boolSelect('supportsStore', 'controls.compat.supportsStore'),
       boolSelect('supportsStrictMode', 'controls.compat.supportsStrictMode'),
       boolSelect(
@@ -190,6 +194,10 @@ export function CompatEditor(props: CompatEditorProps) {
       boolSelect(
         'requiresReasoningContentOnAssistantMessages',
         'controls.compat.requiresReasoningContentOnAssistantMessages',
+      ),
+      boolSelect(
+        'supportsThinkingTokenBudget',
+        'controls.compat.supportsThinkingTokenBudget',
       ),
     )
   }

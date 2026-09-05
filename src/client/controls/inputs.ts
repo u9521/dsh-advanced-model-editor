@@ -21,14 +21,15 @@ export interface TextInputProps {
 }
 
 export interface CapacityInputProps {
-  value?: number
+  value?: number | 'low'
+  allowLow?: boolean
   disabled?: boolean
   placeholder?: string
   placeholderKey?: string
   placeholderVars?: Record<string, string | number>
   ariaLabelKey?: string
   ariaLabelVars?: Record<string, string | number>
-  onChange?: (value: number | undefined) => void
+  onChange?: (value: number | 'low' | undefined) => void
 }
 
 export interface SelectProps {
@@ -116,6 +117,9 @@ export function CapacityInput(props: CapacityInputProps) {
   React.useEffect(() => {
     setBuffer((current) => {
       if (current === undefined) return current
+      if (props.allowLow && current.trim().toLowerCase() === 'low') {
+        return props.value === 'low' ? current : undefined
+      }
       const parsed = parseCapacity(current)
       const synced =
         parsed === undefined
@@ -123,13 +127,18 @@ export function CapacityInput(props: CapacityInputProps) {
           : parsed === props.value
       return synced ? current : undefined
     })
-  }, [props.value])
+  }, [props.value, props.allowLow])
   const display =
-    buffer ?? (props.value === undefined ? '' : formatCapacity(props.value))
+    buffer ??
+    (props.value === undefined
+      ? ''
+      : props.value === 'low'
+        ? 'low'
+        : formatCapacity(props.value))
   return e('input', {
     className: 'dsh-ma-input',
     type: 'text',
-    inputMode: 'numeric',
+    inputMode: props.allowLow ? undefined : 'numeric',
     value: display,
     disabled: props.disabled === true,
     placeholder: props.placeholderKey
@@ -142,6 +151,10 @@ export function CapacityInput(props: CapacityInputProps) {
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
       const raw = event.target.value
       setBuffer(raw)
+      if (props.allowLow && raw.trim().toLowerCase() === 'low') {
+        props.onChange?.('low')
+        return
+      }
       const parsed = parseCapacity(raw)
       if (parsed === undefined) props.onChange?.(undefined)
       else if (!Number.isNaN(parsed)) props.onChange?.(parsed)

@@ -2,7 +2,6 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  IMAGE_DETAILS,
   OFFICIAL_FIELDS,
   OFFICIAL_REASONING,
   PROFILE_FIELDS,
@@ -203,7 +202,6 @@ test('allows deletion only for a user-added llm-pi-ai route', () => {
 
 test('accepts valid official profile with vision and Files API settings', () => {
   assert.deepEqual(OFFICIAL_REASONING, ['off', 'low', 'high', 'max'])
-  assert.deepEqual(IMAGE_DETAILS, ['auto', 'low'])
   assert.ok(OFFICIAL_FIELDS.includes('maxRequestFilesBytes'))
   assert.ok(OFFICIAL_FIELDS.includes('fileExpiresAfterSeconds'))
 
@@ -239,9 +237,8 @@ test('accepts valid official profile with vision and Files API settings', () => 
         id: 'deepseek-v4-flash-vision-exp',
         name: 'DeepSeek-V4-Flash-Vision-Exp',
         inputModalities: ['text', 'image'],
-        imagePixelBudget: 640000,
+        imagePixelBudget: 'low',
         imageMaxBytes: 1048576,
-        imageDetail: 'low',
       },
     ],
   }
@@ -249,6 +246,20 @@ test('accepts valid official profile with vision and Files API settings', () => 
 })
 
 test('rejects invalid official profile vision, file, thinking, and model configurations', () => {
+  // Model cannot declare deprecated imageDetail
+  assert.match(
+    validateOfficialProfile({
+      models: [
+        {
+          id: 'vision-model',
+          inputModalities: ['text', 'image'],
+          imageDetail: 'low',
+        },
+      ],
+    }).join(' '),
+    /invalid/,
+  )
+
   // Thinking disabled but reasoningEffort is not off
   assert.match(
     validateOfficialProfile({
@@ -342,8 +353,10 @@ test('accepts advanced pi-ai provider with image payload and new thinking format
     requestImagePixelBudget: 4194304,
     requestImageMaxBytes: 1048576,
     compat: {
-      thinkingFormat: 'chat-template',
+      thinkingFormat: 'baseten',
       supportsDeveloperRole: false,
+      supportsFinishReason: false,
+      supportsThinkingTokenBudget: true,
       maxTokensField: 'max_tokens',
       cacheControlFormat: 'anthropic',
       supportsStrictMode: true,
@@ -354,11 +367,18 @@ test('accepts advanced pi-ai provider with image payload and new thinking format
         id: 'model-a',
         compat: {
           thinkingFormat: 'qwen-chat-template',
+          supportsFinishReason: true,
+          supportsThinkingTokenBudget: false,
         },
       },
     ],
   }
   assert.deepEqual(validateProfile(profile), [])
+  const stripped = stripModelCompat(profile, 'openai-completions')
+  assert.equal(stripped.compat.supportsFinishReason, false)
+  assert.equal(stripped.compat.supportsThinkingTokenBudget, true)
+  assert.equal(stripped.models[0].compat.supportsFinishReason, true)
+  assert.equal(stripped.models[0].compat.supportsThinkingTokenBudget, false)
 })
 
 test('creates default custom reasoning efforts in order from off to max', () => {

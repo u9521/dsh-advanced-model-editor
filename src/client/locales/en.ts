@@ -139,7 +139,7 @@ export const en: LocaleDictionary = {
     defaultMaxTokens: '32K',
     officialDefaultContextWindow: '1M',
     officialMaxTokens: '256K',
-    imagePixelBudget: '640K',
+    imagePixelBudget: '640K or low',
     imageMaxBytes: '1M',
     requestImagePixelBudget: '4M',
     requestImageMaxBytes: '1M',
@@ -326,6 +326,7 @@ export const en: LocaleDictionary = {
       supportsDeveloperRole: 'developer role support',
       supportsStore: 'store parameter support',
       supportsUsageInStreaming: 'Stream usage tracking support',
+      supportsFinishReason: 'Stream finish_reason support',
       maxTokensField: 'Max tokens field',
       requiresToolResultName: 'Tool results require name',
       requiresAssistantAfterToolResult:
@@ -333,6 +334,7 @@ export const en: LocaleDictionary = {
       requiresThinkingAsText: 'Thinking content required as text',
       requiresReasoningContentOnAssistantMessages:
         'reasoning_content required on replayed messages',
+      supportsThinkingTokenBudget: 'thinking_token_budget support',
       supportsStrictMode: 'Strict tool mode support',
       cacheControlFormat: 'Prompt cache marker format',
       supportsLongCacheRetention: 'Long cache retention support',
@@ -348,6 +350,7 @@ export const en: LocaleDictionary = {
       deepseek: 'DeepSeek',
       openrouter: 'OpenRouter',
       together: 'Together',
+      baseten: 'Baseten',
       zai: 'ZAI',
       qwen: 'Qwen',
       'chat-template': 'Chat Template',

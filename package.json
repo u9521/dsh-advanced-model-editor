@@ -16,7 +16,7 @@
   ],
   "engines": {
     "node": "^22.19 || >=24",
-    "dsh": ">=0.1.0-rc.6"
+    "dsh": ">=0.1.2-rc.1"
   },
   "dsh": {
     "bundle": {
@@ -48,12 +48,12 @@
     "settings"
   ],
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-api-remotes": "^0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-locale": "^0.1.1-rc.2",
+    "@deepseek-ai/cordis": "^4.0.2",
+    "@deepseek-ai/dsh-api-remotes": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-locale": "^0.1.2-rc.1",
     "@deepseek-ai/dsh-client-runtime": "^0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.1-rc.2",
-    "@deepseek-ai/dsh-client-ui-settings": "^0.1.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "^0.1.2-rc.1",
+    "@deepseek-ai/dsh-client-ui-settings": "^0.1.2-rc.1",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.1",
     "lightningcss": "^1.33.0",

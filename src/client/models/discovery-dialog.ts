@@ -38,7 +38,7 @@ export function ModelDiscoveryDialog({
   existing,
   onApply,
   onClose,
-}: ModelDiscoveryDialogProps) {
+}: ModelDiscoveryDialogProps): React.ReactNode {
   const [status, setStatus] = React.useState('loading')
   const [candidates, setCandidates] = React.useState<DiscoveredModel[]>([])
   const [picked, setPicked] = React.useState<Set<string>>(() => new Set())

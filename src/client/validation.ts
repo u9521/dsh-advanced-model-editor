@@ -2,7 +2,6 @@ import {
   BUDGET_LEVELS,
   CACHE_CONTROL_FORMATS,
   CACHE_RETENTIONS,
-  IMAGE_DETAILS,
   MAX_TIMER_DELAY_MS,
   MAX_TOKENS_FIELDS,
   MODALITIES,
@@ -71,10 +70,12 @@ export function validateCompat(
     'supportsDeveloperRole',
     'supportsStore',
     'supportsUsageInStreaming',
+    'supportsFinishReason',
     'requiresToolResultName',
     'requiresAssistantAfterToolResult',
     'requiresThinkingAsText',
     'requiresReasoningContentOnAssistantMessages',
+    'supportsThinkingTokenBudget',
     'supportsStrictMode',
     'supportsLongCacheRetention',
     'supportsEagerToolInputStreaming',
@@ -86,6 +87,10 @@ export function validateCompat(
   ])
     if (owns(value, field) && typeof value[field] !== 'boolean')
       errors.push(tr('validation.invalid', { field: `${path}.${field}` }))
+  for (const dictField of ['chatTemplateKwargs', 'chatTemplateArgs']) {
+    if (owns(value, dictField) && !isObject(value[dictField]))
+      errors.push(tr('validation.object', { field: `${path}.${dictField}` }))
+  }
 }
 
 export function validateReasoningEfforts(
@@ -536,25 +541,36 @@ export function validateOfficialProfile(profile: unknown): string[] {
             )
               errors.push(tr('validation.textOnlyImageLimits'))
           } else {
-            for (const field of ['imagePixelBudget', 'imageMaxBytes'])
-              if (owns(entry, field))
+            if (owns(entry, 'imagePixelBudget')) {
+              const budget = entry.imagePixelBudget
+              if (budget !== 'low') {
                 numberError(
-                  entry[field],
-                  `field.${field}`,
+                  budget,
+                  'field.imagePixelBudget',
                   errors,
                   1,
                   Number.MAX_SAFE_INTEGER,
                   true,
                 )
-            if (
-              owns(entry, 'imageDetail') &&
-              !IMAGE_DETAILS.includes(String(entry.imageDetail))
-            )
+              }
+            }
+            if (owns(entry, 'imageMaxBytes')) {
+              numberError(
+                entry.imageMaxBytes,
+                'field.imageMaxBytes',
+                errors,
+                1,
+                Number.MAX_SAFE_INTEGER,
+                true,
+              )
+            }
+            if (owns(entry, 'imageDetail')) {
               errors.push(
                 tr('validation.invalid', {
                   field: `${path}.imageDetail`,
                 }),
               )
+            }
           }
         }
       })

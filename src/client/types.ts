@@ -14,17 +14,28 @@ export type RetryMode = 'normal' | 'always'
 
 export type BudgetLevel = 'minimal' | 'low' | 'medium' | 'high'
 
+export type ChatTemplateKwargValue =
+  | string
+  | number
+  | boolean
+  | null
+  | { $var: 'thinking.enabled' | 'thinking.effort'; omitWhenOff?: boolean }
+
 export interface CompatProfile {
   thinkingFormat?: string
   supportsReasoningEffort?: boolean
   supportsDeveloperRole?: boolean
   supportsStore?: boolean
   supportsUsageInStreaming?: boolean
+  supportsFinishReason?: boolean
   maxTokensField?: string
   requiresToolResultName?: boolean
   requiresAssistantAfterToolResult?: boolean
   requiresThinkingAsText?: boolean
   requiresReasoningContentOnAssistantMessages?: boolean
+  chatTemplateKwargs?: Record<string, ChatTemplateKwargValue>
+  chatTemplateArgs?: Record<string, ChatTemplateKwargValue>
+  supportsThinkingTokenBudget?: boolean
   supportsStrictMode?: boolean
   cacheControlFormat?: string
   supportsLongCacheRetention?: boolean
@@ -48,9 +59,8 @@ export interface ModelProfile {
   maxTokens?: number
   input?: Modality[]
   inputModalities?: Modality[]
-  imagePixelBudget?: number
+  imagePixelBudget?: number | 'low'
   imageMaxBytes?: number
-  imageDetail?: 'auto' | 'low'
   reasoningEfforts?: false | ReasoningEfforts
   compat?: CompatProfile
 }
@@ -153,7 +163,7 @@ export interface RpcEnvelope {
 
 /**
  * The settings/LLM Web API surface used by the advanced model pages.
- * `ctx.connection.api` satisfies it structurally.
+ * Adapted from `ctx.remote` (llm, settings, credentials) by `createModelApi`.
  */
 export interface ModelApi {
   llm: {
