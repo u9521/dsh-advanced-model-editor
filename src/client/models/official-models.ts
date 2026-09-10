@@ -1,6 +1,11 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-import { CapacityInput, Modalities, TextInput } from '../controls/index.ts'
+import {
+  CapacityInput,
+  Modalities,
+  Select,
+  TextInput,
+} from '../controls/index.ts'
 import type { Modality, ModelProfile } from '../types.ts'
 import { clone, tr } from '../utils.ts'
 
@@ -192,6 +197,32 @@ export function OfficialModelList({
               placeholder: '32K',
               ariaLabelKey: 'models.field.maxTokens',
               onChange: (nextValue) => update(index, 'maxTokens', nextValue),
+            }),
+          ),
+          e(
+            'label',
+            { className: 'dsh-ma-field dsh-ma-wide' },
+            e(
+              'span',
+              { className: 'dsh-ma-field-label' },
+              tr('models.field.systemPromptUpdate'),
+            ),
+            e(Select, {
+              value: model.systemPromptUpdate,
+              choices: [
+                {
+                  value: 'in-history',
+                  labelKey: 'models.systemPromptUpdate.inHistory',
+                },
+              ],
+              disabled,
+              unsetKey: 'models.systemPromptUpdate.default',
+              onChange: (nextValue) =>
+                update(
+                  index,
+                  'systemPromptUpdate',
+                  nextValue === 'in-history' ? 'in-history' : undefined,
+                ),
             }),
           ),
           e(

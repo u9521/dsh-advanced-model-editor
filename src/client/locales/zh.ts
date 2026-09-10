@@ -329,7 +329,11 @@ export const zh: LocaleDictionary = {
       requiresReasoningContentOnAssistantMessages:
         '回放消息必须带 reasoning_content',
       supportsThinkingTokenBudget: 'thinking_token_budget 思考预算支持',
+      thinkingTokenBudgetField: '思考预算字段名',
+      vllmPriority: 'vLLM 调度优先级',
+      vllmPriorityPlaceholder: '例如 0（整数，越小优先级越高）',
       supportsStrictMode: '严格工具模式 (strict) 支持',
+      supportsMaxOutputTokens: 'max_output_tokens 参数支持',
       cacheControlFormat: 'Prompt Cache 标记格式',
       supportsLongCacheRetention: '长期提示词缓存支持',
       supportsEagerToolInputStreaming: '逐工具输入流式传输支持',
@@ -355,6 +359,11 @@ export const zh: LocaleDictionary = {
     maxTokensField: {
       max_tokens: 'max_tokens',
       max_completion_tokens: 'max_completion_tokens',
+    },
+    thinkingTokenBudgetField: {
+      thinking_token_budget: 'thinking_token_budget',
+      thinking_budget: 'thinking_budget',
+      thinking_budget_tokens: 'thinking_budget_tokens',
     },
     cacheControlFormat: {
       anthropic: 'Anthropic',
@@ -382,8 +391,13 @@ export const zh: LocaleDictionary = {
       imageDetail: '图片细节层级',
       imagePixelBudget: '单图像素预算',
       imageMaxBytes: '单图最大字节',
+      systemPromptUpdate: '系统提示词更新方式',
       reasoningEfforts: '推理档位映射',
       compat: '模型兼容性',
+    },
+    systemPromptUpdate: {
+      default: '默认（首条生效）',
+      inHistory: '最新条生效（in-history）',
     },
     reasoning: {
       inherit: '继承模型目录',

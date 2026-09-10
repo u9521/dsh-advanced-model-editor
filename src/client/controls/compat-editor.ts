@@ -4,11 +4,12 @@ import {
   MAX_TOKENS_FIELDS,
   PROTOCOL_COMPAT_FIELDS,
   THINKING_FORMATS,
+  THINKING_TOKEN_BUDGET_FIELDS,
 } from '../constants.ts'
 import type { CompatProfile } from '../types.ts'
 import { isObject, tr } from '../utils.ts'
 import { Field } from './field.ts'
-import { Select } from './inputs.ts'
+import { Select, TextInput } from './inputs.ts'
 
 export interface CompatEditorProps {
   value?: CompatProfile
@@ -112,6 +113,10 @@ export function CompatEditor(props: CompatEditorProps) {
       ),
       boolSelect('supportsStrictMode', 'controls.compat.supportsStrictMode'),
       boolSelect(
+        'supportsMaxOutputTokens',
+        'controls.compat.supportsMaxOutputTokens',
+      ),
+      boolSelect(
         'supportsLongCacheRetention',
         'controls.compat.supportsLongCacheRetention',
       ),
@@ -198,6 +203,35 @@ export function CompatEditor(props: CompatEditorProps) {
       boolSelect(
         'supportsThinkingTokenBudget',
         'controls.compat.supportsThinkingTokenBudget',
+      ),
+      e(
+        Field,
+        { labelKey: 'controls.compat.thinkingTokenBudgetField' },
+        e(Select, {
+          value: compat.thinkingTokenBudgetField,
+          choices: [...THINKING_TOKEN_BUDGET_FIELDS],
+          disabled: props.disabled,
+          unsetKey: 'controls.select.auto',
+          onChange: (value) => set('thinkingTokenBudgetField', value),
+        }),
+      ),
+      e(
+        Field,
+        { labelKey: 'controls.compat.vllmPriority' },
+        e(TextInput, {
+          type: 'number',
+          step: 1,
+          value: compat.vllmPriority,
+          placeholderKey: 'controls.compat.vllmPriorityPlaceholder',
+          disabled: props.disabled,
+          onChange: (value) =>
+            set(
+              'vllmPriority',
+              typeof value === 'number' && Number.isFinite(value)
+                ? Math.trunc(value)
+                : undefined,
+            ),
+        }),
       ),
     )
   }

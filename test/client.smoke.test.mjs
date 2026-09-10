@@ -91,6 +91,7 @@ test('constants, utils, state, validation and locales load directly as TypeScrip
     'OFFICIAL_NS',
     'LOCALE_NS',
     'PROFILE_FIELDS',
+    'THINKING_TOKEN_BUDGET_FIELDS',
   ]) {
     assert.ok(name in constants, `constants should export ${name}`)
   }

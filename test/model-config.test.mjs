@@ -229,6 +229,15 @@ test('accepts valid official profile with vision and Files API settings', () => 
     },
     models: [
       {
+        id: 'deepseek-flash',
+        name: 'DeepSeek-V41-Flash',
+        contextWindow: 1000000,
+        inputModalities: ['text', 'image'],
+        imagePixelBudget: 4194304,
+        imageMaxBytes: 1048576,
+        systemPromptUpdate: 'in-history',
+      },
+      {
         id: 'deepseek-v4-flash',
         name: 'DeepSeek-V4-Flash',
         contextWindow: 1000000,
@@ -315,6 +324,74 @@ test('rejects invalid official profile vision, file, thinking, and model configu
       models: [{ id: 'dup' }, { id: 'dup' }],
     }).join(' '),
     /duplicateModel/,
+  )
+
+  // Invalid systemPromptUpdate (only in-history allowed)
+  assert.match(
+    validateOfficialProfile({
+      models: [{ id: 'm', systemPromptUpdate: 'invalid-mode' }],
+    }).join(' '),
+    /invalid/,
+  )
+})
+
+test('accepts and validates DSH 0.1.5 compat fields (thinkingTokenBudgetField, vllmPriority, supportsMaxOutputTokens)', () => {
+  const completionsProfile = {
+    api: 'openai-completions',
+    compat: {
+      supportsThinkingTokenBudget: true,
+      thinkingTokenBudgetField: 'thinking_token_budget',
+      vllmPriority: 10,
+    },
+    models: [
+      {
+        id: 'vllm-model',
+        compat: {
+          thinkingTokenBudgetField: 'thinking_budget_tokens',
+          vllmPriority: -1,
+        },
+      },
+    ],
+  }
+  assert.deepEqual(validateProfile(completionsProfile), [])
+
+  const responsesProfile = {
+    api: 'openai-responses',
+    compat: {
+      supportsDeveloperRole: true,
+      supportsStrictMode: true,
+      supportsMaxOutputTokens: false,
+    },
+    models: [
+      {
+        id: 'responses-model',
+        compat: {
+          supportsMaxOutputTokens: true,
+          thinkingFormat: 'openai', // should be stripped for openai-responses
+        },
+      },
+    ],
+  }
+  assert.deepEqual(validateProfile(responsesProfile), [])
+
+  const strippedResponses = stripModelCompat(responsesProfile, 'openai-responses')
+  assert.equal(strippedResponses.compat.supportsMaxOutputTokens, false)
+  assert.equal(strippedResponses.models[0].compat.supportsMaxOutputTokens, true)
+  assert.equal(strippedResponses.models[0].compat.thinkingFormat, undefined)
+
+  // Invalid tests
+  assert.match(
+    validateProfile({
+      compat: { thinkingTokenBudgetField: 'invalid_field' },
+    }).join(' '),
+    /invalid/,
+  )
+
+  assert.match(
+    validateProfile({
+      compat: { vllmPriority: 1.5 }, // must be integer
+    }).join(' '),
+    /number/,
   )
 })
 

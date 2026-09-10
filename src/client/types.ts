@@ -19,7 +19,10 @@ export type ChatTemplateKwargValue =
   | number
   | boolean
   | null
-  | { $var: 'thinking.enabled' | 'thinking.effort'; omitWhenOff?: boolean }
+  | {
+      $var: 'thinking.enabled' | 'thinking.effort' | 'thinking.budget'
+      omitWhenOff?: boolean
+    }
 
 export interface CompatProfile {
   thinkingFormat?: string
@@ -36,7 +39,10 @@ export interface CompatProfile {
   chatTemplateKwargs?: Record<string, ChatTemplateKwargValue>
   chatTemplateArgs?: Record<string, ChatTemplateKwargValue>
   supportsThinkingTokenBudget?: boolean
+  thinkingTokenBudgetField?: string
+  vllmPriority?: number
   supportsStrictMode?: boolean
+  supportsMaxOutputTokens?: boolean
   cacheControlFormat?: string
   supportsLongCacheRetention?: boolean
   supportsEagerToolInputStreaming?: boolean
@@ -61,6 +67,7 @@ export interface ModelProfile {
   inputModalities?: Modality[]
   imagePixelBudget?: number | 'low'
   imageMaxBytes?: number
+  systemPromptUpdate?: 'in-history'
   reasoningEfforts?: false | ReasoningEfforts
   compat?: CompatProfile
 }

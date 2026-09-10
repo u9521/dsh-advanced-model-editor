@@ -335,7 +335,11 @@ export const en: LocaleDictionary = {
       requiresReasoningContentOnAssistantMessages:
         'reasoning_content required on replayed messages',
       supportsThinkingTokenBudget: 'thinking_token_budget support',
+      thinkingTokenBudgetField: 'Thinking token budget field',
+      vllmPriority: 'vLLM scheduler priority',
+      vllmPriorityPlaceholder: 'e.g. 0 (integer, lower runs earlier)',
       supportsStrictMode: 'Strict tool mode support',
+      supportsMaxOutputTokens: 'max_output_tokens support',
       cacheControlFormat: 'Prompt cache marker format',
       supportsLongCacheRetention: 'Long cache retention support',
       supportsEagerToolInputStreaming: 'Eager tool input streaming support',
@@ -361,6 +365,11 @@ export const en: LocaleDictionary = {
     maxTokensField: {
       max_tokens: 'max_tokens',
       max_completion_tokens: 'max_completion_tokens',
+    },
+    thinkingTokenBudgetField: {
+      thinking_token_budget: 'thinking_token_budget',
+      thinking_budget: 'thinking_budget',
+      thinking_budget_tokens: 'thinking_budget_tokens',
     },
     cacheControlFormat: {
       anthropic: 'Anthropic',
@@ -388,8 +397,13 @@ export const en: LocaleDictionary = {
       imageDetail: 'Image detail tier',
       imagePixelBudget: 'Image pixel budget',
       imageMaxBytes: 'Image max bytes',
+      systemPromptUpdate: 'System prompt update',
       reasoningEfforts: 'Reasoning effort mapping',
       compat: 'Model compatibility',
+    },
+    systemPromptUpdate: {
+      default: 'Default (first system message)',
+      inHistory: 'Latest message (in-history)',
     },
     reasoning: {
       inherit: 'Inherit model catalog',

@@ -90,6 +90,12 @@ export const MAX_TOKENS_FIELDS: string[] = [
   'max_completion_tokens',
 ]
 
+export const THINKING_TOKEN_BUDGET_FIELDS: string[] = [
+  'thinking_token_budget',
+  'thinking_budget',
+  'thinking_budget_tokens',
+]
+
 export const CACHE_CONTROL_FORMATS: string[] = ['anthropic']
 
 export const PROTOCOL_COMPAT_FIELDS: Record<string, string[]> = {
@@ -108,12 +114,15 @@ export const PROTOCOL_COMPAT_FIELDS: Record<string, string[]> = {
     'chatTemplateKwargs',
     'chatTemplateArgs',
     'supportsThinkingTokenBudget',
+    'thinkingTokenBudgetField',
+    'vllmPriority',
     'supportsStrictMode',
     'cacheControlFormat',
     'supportsLongCacheRetention',
   ],
   'openai-responses': [
     'supportsDeveloperRole',
+    'supportsMaxOutputTokens',
     'supportsStrictMode',
     'supportsLongCacheRetention',
   ],

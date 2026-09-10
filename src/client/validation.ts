@@ -10,6 +10,7 @@ import {
   PROTOCOLS,
   THINKING_FORMATS,
   THINKING_LEVELS,
+  THINKING_TOKEN_BUDGET_FIELDS,
   TRANSPORTS,
 } from './constants.ts'
 import type {
@@ -59,6 +60,25 @@ export function validateCompat(
   )
     errors.push(tr('validation.invalid', { field: `${path}.maxTokensField` }))
   if (
+    owns(value, 'thinkingTokenBudgetField') &&
+    !THINKING_TOKEN_BUDGET_FIELDS.includes(
+      String(value.thinkingTokenBudgetField),
+    )
+  )
+    errors.push(
+      tr('validation.invalid', { field: `${path}.thinkingTokenBudgetField` }),
+    )
+  if (owns(value, 'vllmPriority')) {
+    numberError(
+      value.vllmPriority,
+      `${path}.vllmPriority`,
+      errors,
+      -Number.MAX_SAFE_INTEGER,
+      Number.MAX_SAFE_INTEGER,
+      true,
+    )
+  }
+  if (
     owns(value, 'cacheControlFormat') &&
     !CACHE_CONTROL_FORMATS.includes(String(value.cacheControlFormat))
   )
@@ -77,6 +97,7 @@ export function validateCompat(
     'requiresReasoningContentOnAssistantMessages',
     'supportsThinkingTokenBudget',
     'supportsStrictMode',
+    'supportsMaxOutputTokens',
     'supportsLongCacheRetention',
     'supportsEagerToolInputStreaming',
     'supportsCacheControlOnTools',
@@ -507,6 +528,13 @@ export function validateOfficialProfile(profile: unknown): string[] {
             (typeof entry.name !== 'string' || entry.name.trim().length === 0)
           )
             errors.push(tr('validation.invalid', { field: `${path}.name` }))
+          if (
+            owns(entry, 'systemPromptUpdate') &&
+            entry.systemPromptUpdate !== 'in-history'
+          )
+            errors.push(
+              tr('validation.invalid', { field: `${path}.systemPromptUpdate` }),
+            )
           for (const field of ['contextWindow', 'maxTokens'])
             if (owns(entry, field))
               numberError(
