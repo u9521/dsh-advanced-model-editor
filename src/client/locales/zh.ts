@@ -89,7 +89,6 @@ export const zh: LocaleDictionary = {
     id: '模型 ID',
     input: '输入模态',
     inputModalities: '输入模态',
-    imageDetail: '图片细节层级',
     imagePixelBudget: '单图像素预算',
     imageMaxBytes: '单图最大字节',
     maxRequestImageBytes: '请求图片最大载荷（字节）',
@@ -268,7 +267,6 @@ export const zh: LocaleDictionary = {
       enabled: '启用',
       disabled: '禁用',
     },
-    imageDetail: { auto: '自动', low: '低细节 (Low)' },
     cache: { none: '不保留', short: '短期', long: '长期' },
     transport: {
       sse: 'SSE',
@@ -388,7 +386,6 @@ export const zh: LocaleDictionary = {
       maxTokens: '最大输出 token',
       input: '输入模态',
       inputModalities: '输入模态',
-      imageDetail: '图片细节层级',
       imagePixelBudget: '单图像素预算',
       imageMaxBytes: '单图最大字节',
       systemPromptUpdate: '系统提示词更新方式',

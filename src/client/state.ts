@@ -137,7 +137,7 @@ export function stripModelCompat(
   profile: ProviderProfile,
   api: string | undefined,
 ): ProviderProfile {
-  if (api === 'openai-completions' || api === undefined) return profile
+  if (api === undefined) return profile
   const next = clone(profile)
   if (owns(next, 'compat')) {
     const cleaned = filterCompatByProtocol(next.compat, api)

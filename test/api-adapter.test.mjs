@@ -231,12 +231,10 @@ test('credentials describe, set, and unset forward parameters and return expecte
   })
   const api = createModelApi(ctx)
 
-  // describe with { refs: ['MY_KEY'] }
-  const describeEnv = await api.credentials.describe({ refs: ['MY_KEY'] })
+  // describe with ['MY_KEY']
+  const describeEnv = await api.credentials.describe(['MY_KEY'])
   assert.deepEqual(describedRefs, ['MY_KEY'])
   assert.equal(describeEnv.result.ok, true)
-  // Both value.credentials[key] and value[key] are accessible
-  assert.deepEqual(describeEnv.result.value.credentials.MY_KEY, { configured: true })
   assert.deepEqual(describeEnv.result.value.MY_KEY, { configured: true })
 
   // set with { ref, value }

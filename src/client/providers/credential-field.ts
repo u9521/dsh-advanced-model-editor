@@ -25,15 +25,16 @@ export function CredentialField({
   const [state, setState] = React.useState<{ configured?: boolean }>()
   React.useEffect(() => {
     let active = true
-    api.credentials.describe({ refs: [keyRef] }).then(
+    api.credentials.describe([keyRef]).then(
       (response) => {
         if (active && response.result.ok)
           setState(
             (
-              response.result.value as {
-                credentials: Record<string, { configured?: boolean }>
-              }
-            ).credentials[keyRef],
+              response.result.value as Record<
+                string,
+                { configured?: boolean } | undefined
+              >
+            )?.[keyRef],
           )
       },
       () => undefined,

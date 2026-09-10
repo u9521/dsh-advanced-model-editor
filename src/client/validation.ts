@@ -547,9 +547,9 @@ export function validateOfficialProfile(profile: unknown): string[] {
               )
           const modalities = owns(entry, 'inputModalities')
             ? entry.inputModalities
-            : owns(entry, 'input')
-              ? entry.input
-              : undefined
+            : undefined
+          if (owns(entry, 'input'))
+            errors.push(tr('validation.invalid', { field: `${path}.input` }))
           if (modalities !== undefined) {
             if (
               !Array.isArray(modalities) ||
@@ -562,11 +562,7 @@ export function validateOfficialProfile(profile: unknown): string[] {
           const hasImage =
             Array.isArray(modalities) && modalities.includes('image')
           if (!hasImage) {
-            if (
-              owns(entry, 'imagePixelBudget') ||
-              owns(entry, 'imageMaxBytes') ||
-              owns(entry, 'imageDetail')
-            )
+            if (owns(entry, 'imagePixelBudget') || owns(entry, 'imageMaxBytes'))
               errors.push(tr('validation.textOnlyImageLimits'))
           } else {
             if (owns(entry, 'imagePixelBudget')) {
@@ -590,13 +586,6 @@ export function validateOfficialProfile(profile: unknown): string[] {
                 1,
                 Number.MAX_SAFE_INTEGER,
                 true,
-              )
-            }
-            if (owns(entry, 'imageDetail')) {
-              errors.push(
-                tr('validation.invalid', {
-                  field: `${path}.imageDetail`,
-                }),
               )
             }
           }

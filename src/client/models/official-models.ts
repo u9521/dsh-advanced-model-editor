@@ -23,7 +23,6 @@ function setField<T extends object>(
   value: unknown,
 ): T {
   const next = clone({ ...(source || {}) }) as Record<string, unknown>
-  delete next.imageDetail
   if (value === undefined) delete next[field]
   else next[field] = clone(value)
   return next as T
@@ -51,7 +50,7 @@ export function OfficialModelList({
     'div',
     { className: 'dsh-ma-wide' },
     models.map((model, index) => {
-      const modalities = model.inputModalities ?? model.input ?? ['text']
+      const modalities = model.inputModalities ?? ['text']
       const hasImage = modalities.includes('image')
       return e(
         'div',
@@ -248,8 +247,6 @@ export function OfficialModelList({
                   delete nextModel.imagePixelBudget
                   delete nextModel.imageMaxBytes
                 }
-                delete (nextModel as Record<string, unknown>).imageDetail
-                delete nextModel.input
                 onChange(
                   models.map((item, itemIndex) =>
                     itemIndex === index ? nextModel : item,

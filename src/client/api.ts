@@ -1,7 +1,7 @@
 import type { ModelApi, RpcEnvelope } from './types.ts'
 
 /**
- * Creates a ModelApi adapter over DSH 0.1.2+ Typert Remote services.
+ * Creates a ModelApi adapter over DSH Typert Remote services (DSH >=0.1.5-rc.1).
  * @param ctx - Cordis client context providing ctx.remote.
  */
 export function createModelApi(ctx: any): ModelApi {
@@ -151,11 +151,7 @@ export function createModelApi(ctx: any): ModelApi {
 
     credentials: {
       async describe(input: any): Promise<RpcEnvelope> {
-        const refs = Array.isArray(input)
-          ? input
-          : Array.isArray(input?.refs)
-            ? input.refs
-            : []
+        const refs = Array.isArray(input) ? input : []
         const res = await remote.credentials.describe(refs)
         if (!res.ok) {
           return {
@@ -170,7 +166,7 @@ export function createModelApi(ctx: any): ModelApi {
         return {
           result: {
             ok: true,
-            value: { credentials: res.value, ...res.value },
+            value: res.value,
           },
         }
       },

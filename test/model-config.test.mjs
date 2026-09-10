@@ -26,30 +26,42 @@ import {
   validateRetryPolicy,
 } from '../src/client/validation.ts'
 
-test('strips model compat only when saving a non-openai-completions protocol', () => {
+test('filters model compat precisely per protocol including openai-completions', () => {
   const profile = {
     api: 'anthropic-messages',
     models: [
-      { id: 'one', compat: { thinkingFormat: 'openai' }, contextWindow: 64000 },
+      {
+        id: 'one',
+        compat: { thinkingFormat: 'openai', supportsTemperature: true },
+        contextWindow: 64000,
+      },
       { id: 'two', compat: { supportsReasoningEffort: true } },
     ],
     modelOverrides: { builtin: { compat: { thinkingFormat: 'openai' } } },
   }
   const stripped = stripModelCompat(profile, 'anthropic-messages')
   assert.deepEqual(stripped.models, [
-    { id: 'one', contextWindow: 64000 },
+    { id: 'one', compat: { supportsTemperature: true }, contextWindow: 64000 },
     { id: 'two' },
   ])
   assert.deepEqual(stripped.modelOverrides, { builtin: {} })
   assert.equal(stripped.api, 'anthropic-messages')
 
-  // openai-completions (and an unset protocol) keep compat untouched.
-  assert.equal(stripModelCompat(profile, 'openai-completions'), profile)
+  // unset protocol keeps profile untouched
   assert.equal(stripModelCompat(profile, undefined), profile)
-  // Any other protocol strips compat.
-  const responses = stripModelCompat(profile, 'openai-responses')
-  assert.equal(responses.models[0].compat, undefined)
-  assert.equal(responses.models[1].compat, undefined)
+
+  // openai-completions filters fields to completions-supported fields only
+  const completionsProfile = {
+    models: [
+      {
+        id: 'one',
+        compat: { thinkingFormat: 'openai', supportsTemperature: true },
+      },
+    ],
+  }
+  const completions = stripModelCompat(completionsProfile, 'openai-completions')
+  assert.deepEqual(completions.models[0].compat, { thinkingFormat: 'openai' })
+
   // Original profile is never mutated.
   assert.equal(profile.models[0].compat.thinkingFormat, 'openai')
   assert.ok(profile.models[0].compat)
@@ -255,14 +267,13 @@ test('accepts valid official profile with vision and Files API settings', () => 
 })
 
 test('rejects invalid official profile vision, file, thinking, and model configurations', () => {
-  // Model cannot declare deprecated imageDetail
+  // Official model cannot declare pi-ai input field
   assert.match(
     validateOfficialProfile({
       models: [
         {
           id: 'vision-model',
-          inputModalities: ['text', 'image'],
-          imageDetail: 'low',
+          input: ['text', 'image'],
         },
       ],
     }).join(' '),

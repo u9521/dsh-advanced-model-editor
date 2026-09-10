@@ -90,7 +90,6 @@ export const en: LocaleDictionary = {
     id: 'Model ID',
     input: 'Input modalities',
     inputModalities: 'Input modalities',
-    imageDetail: 'Image detail tier',
     imagePixelBudget: 'Image pixel budget',
     imageMaxBytes: 'Image max bytes',
     maxRequestImageBytes: 'Max request image bytes',
@@ -273,7 +272,6 @@ export const en: LocaleDictionary = {
       enabled: 'Enabled',
       disabled: 'Disabled',
     },
-    imageDetail: { auto: 'Auto', low: 'Low' },
     cache: { none: 'None', short: 'Short', long: 'Long' },
     transport: {
       sse: 'SSE',
@@ -394,7 +392,6 @@ export const en: LocaleDictionary = {
       maxTokens: 'Max output tokens',
       input: 'Input modalities',
       inputModalities: 'Input modalities',
-      imageDetail: 'Image detail tier',
       imagePixelBudget: 'Image pixel budget',
       imageMaxBytes: 'Image max bytes',
       systemPromptUpdate: 'System prompt update',
