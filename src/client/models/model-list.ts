@@ -1,5 +1,6 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
+import { discoveredModelProfile } from '../state.ts'
 import type { ModelProfile } from '../types.ts'
 import { clone, isObject, tr } from '../utils.ts'
 import { DiscoveryProbe, ModelDiscoveryDialog } from './discovery-dialog.ts'
@@ -129,7 +130,7 @@ export function ModelList({
                   }
                 },
               },
-              e(primitives.IconCopyOutline16, { size: 16 }),
+              e(primitives.IconCopyOutlineRegular, { size: 16 }),
             ),
             e(
               'button',
@@ -150,7 +151,7 @@ export function ModelList({
                     onChange(list.filter((_, itemIndex) => itemIndex !== index))
                 },
               },
-              e(primitives.IconCloseOutline16, { size: 16 }),
+              e(primitives.IconCloseOutlineRegular, { size: 16 }),
             ),
           ),
         ),
@@ -183,7 +184,7 @@ export function ModelList({
             onChange({ ...(value || {}), [id]: {} })
           },
         },
-        e(primitives.IconPlusOutline16, { size: 14 }),
+        e(primitives.IconPlusOutlineRegular, { size: 14 }),
         tr(override ? 'models.action.addOverride' : 'models.action.add'),
       ),
       !override && probe
@@ -218,16 +219,7 @@ export function ModelList({
             for (const model of models) {
               if (!model.id || known.has(model.id)) continue
               known.add(model.id)
-              additions.push({
-                id: model.id,
-                ...(model.name ? { name: model.name } : {}),
-                ...(typeof model.contextWindow === 'number'
-                  ? { contextWindow: model.contextWindow }
-                  : {}),
-                ...(typeof model.maxTokens === 'number'
-                  ? { maxTokens: model.maxTokens }
-                  : {}),
-              })
+              additions.push(discoveredModelProfile(model))
             }
             onChange([...list, ...additions])
             setDiscovering(false)

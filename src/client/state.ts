@@ -1,11 +1,14 @@
 import {
+  MODALITIES,
   PROFILE_FIELDS,
   PROTOCOL_COMPAT_FIELDS,
   SETTINGS_NS,
 } from './constants.ts'
 import type {
   CompatProfile,
+  DiscoveredModel,
   EditorState,
+  Modality,
   ModelProfile,
   ProviderProfile,
   ProviderRow,
@@ -13,6 +16,44 @@ import type {
   SettingsPathOp,
 } from './types.ts'
 import { at, clone, equal, isObject, owns, tr } from './utils.ts'
+
+/**
+ * The disclosed input types we can actually store, in wire order. An endpoint
+ * may echo anything; narrowing here keeps a malformed value out of the draft.
+ * @param candidate - one discovered model.
+ * @returns the recognized modalities, empty when none were disclosed.
+ */
+export function disclosedModalities(candidate: DiscoveredModel): Modality[] {
+  return Array.isArray(candidate.inputModalities)
+    ? candidate.inputModalities.filter((item): item is Modality =>
+        (MODALITIES as string[]).includes(item),
+      )
+    : []
+}
+
+/**
+ * Project one discovered candidate onto the model shape a pi-ai route stores.
+ * `description` is deliberately dropped: it exists only in the official
+ * catalog's model entry, not in `PiAiModelProfile`.
+ * @param candidate - one discovered model.
+ * @returns the profile fields the discovered facts can fill.
+ */
+export function discoveredModelProfile(
+  candidate: DiscoveredModel,
+): ModelProfile {
+  const modalities = disclosedModalities(candidate)
+  return {
+    ...(candidate.id ? { id: candidate.id } : {}),
+    ...(candidate.name ? { name: candidate.name } : {}),
+    ...(typeof candidate.contextWindow === 'number'
+      ? { contextWindow: candidate.contextWindow }
+      : {}),
+    ...(typeof candidate.maxTokens === 'number'
+      ? { maxTokens: candidate.maxTokens }
+      : {}),
+    ...(modalities.length > 0 ? { input: modalities } : {}),
+  }
+}
 
 export function initialEditorState(
   namespace: SettingsNamespaceView | undefined,

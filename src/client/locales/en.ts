@@ -395,12 +395,18 @@ export const en: LocaleDictionary = {
       imagePixelBudget: 'Image pixel budget',
       imageMaxBytes: 'Image max bytes',
       systemPromptUpdate: 'System prompt update',
+      toolUpdate: 'Tool update mode',
       reasoningEfforts: 'Reasoning effort mapping',
       compat: 'Model compatibility',
     },
     systemPromptUpdate: {
       default: 'Default (first system message)',
       inHistory: 'Latest message (in-history)',
+    },
+    toolUpdate: {
+      default: 'Default (full tool list every request)',
+      inHistory: 'In-history (removals applied)',
+      additionOnly: 'Addition-only (defer_loading)',
     },
     reasoning: {
       inherit: 'Inherit model catalog',
@@ -423,6 +429,7 @@ export const en: LocaleDictionary = {
       existing: 'Existing',
       contextWindow: 'Context {value}',
       maxTokens: 'Output cap {value}',
+      inputModalities: 'Input: {value}',
       open: 'Fetch available models',
     },
     override: { idPlaceholder: 'Built-in model ID' },

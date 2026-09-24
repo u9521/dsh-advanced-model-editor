@@ -31,10 +31,10 @@ function loadBundle() {
     ['react', stubReact()],
     ['@deepseek-ai/dsh-client-ui-primitives', {
       Modal: 'Modal',
-      IconCloseOutline16: 'IconCloseOutline16',
-      IconPlusOutline16: 'IconPlusOutline16',
-      IconRefreshOutline16: 'IconRefreshOutline16',
-      IconCopyOutline16: 'IconCopyOutline16',
+      IconCloseOutlineRegular: 'IconCloseOutlineRegular',
+      IconPlusOutlineRegular: 'IconPlusOutlineRegular',
+      IconRefreshOutlineRegular: 'IconRefreshOutlineRegular',
+      IconCopyOutlineRegular: 'IconCopyOutlineRegular',
     }],
   ])
   const cache = new Map()

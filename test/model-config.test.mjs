@@ -6,10 +6,13 @@ import {
   OFFICIAL_REASONING,
   PROFILE_FIELDS,
   SETTINGS_NS,
+  TOOL_UPDATES,
 } from '../src/client/constants.ts'
 import {
   buildProfileOps,
   deleteProviderOps,
+  disclosedModalities,
+  discoveredModelProfile,
   groupProviderRows,
   initialEditorState,
   stripModelCompat,
@@ -346,7 +349,7 @@ test('rejects invalid official profile vision, file, thinking, and model configu
   )
 })
 
-test('accepts and validates DSH 0.1.5 compat fields (thinkingTokenBudgetField, vllmPriority, supportsMaxOutputTokens)', () => {
+test('accepts and validates compat fields (thinkingTokenBudgetField, vllmPriority, supportsMaxOutputTokens)', () => {
   const completionsProfile = {
     api: 'openai-completions',
     compat: {
@@ -483,5 +486,99 @@ test('creates default custom reasoning efforts in order from off to max', () => 
   assert.deepEqual(
     Object.keys(defaultEfforts),
     ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
+  )
+})
+
+test('validates the official model toolUpdate mode', () => {
+  assert.deepEqual(TOOL_UPDATES, ['in-history', 'addition-only'])
+  assert.deepEqual(validateOfficialProfile({ models: [{ id: 'm' }] }), [])
+  for (const toolUpdate of TOOL_UPDATES) {
+    assert.deepEqual(
+      validateOfficialProfile({ models: [{ id: 'm', toolUpdate }] }),
+      [],
+    )
+  }
+  const rejected = validateOfficialProfile({
+    models: [{ id: 'm', toolUpdate: 'never' }],
+  })
+  assert.equal(rejected.length, 1)
+  assert.match(rejected[0], /validation\.invalid/)
+})
+
+test('validates both retry policy shapes with upstream optionality', () => {
+  // `backoff` and each of its fields are optional upstream.
+  assert.deepEqual(validateRetryPolicy({ mode: 'normal' }), [])
+  assert.deepEqual(validateRetryPolicy({ mode: 'always' }), [])
+  assert.deepEqual(validateRetryPolicy({ mode: 'normal', backoff: {} }), [])
+  assert.deepEqual(
+    validateRetryPolicy({
+      mode: 'always',
+      backoff: { initialDelayMs: 500, maxDelayMs: 10000, jitterRatio: 0.1 },
+    }),
+    [],
+  )
+  // `always` carries no bounded-only fields; a stray one is ignored, not fatal.
+  assert.deepEqual(
+    validateRetryPolicy({ mode: 'always', maxRetries: 3, retryableCodes: ['SERVER'] }),
+    [],
+  )
+  assert.deepEqual(
+    validateRetryPolicy({ mode: 'normal', maxRetries: 2, retryableCodes: ['SERVER'] }),
+    [],
+  )
+  // A malformed backoff, a missing/unknown mode, and an empty code list stay invalid.
+  assert.match(
+    validateRetryPolicy({ mode: 'normal', backoff: 'x' }).join(' '),
+    /validation\.retry/,
+  )
+  assert.match(
+    validateRetryPolicy({ mode: 'normal', backoff: { jitterRatio: 2 } }).join(' '),
+    /validation\.number/,
+  )
+  assert.match(validateRetryPolicy({}).join(' '), /validation\.retry/)
+  assert.match(
+    validateRetryPolicy({ mode: 'sometimes' }).join(' '),
+    /validation\.retry/,
+  )
+  assert.match(
+    validateRetryPolicy({ mode: 'normal', retryableCodes: [] }).join(' '),
+    /retryCodes/,
+  )
+})
+
+test('projects discovered models onto the pi-ai shape and adopts disclosed modalities', () => {
+  // Only modalities the plugin can store survive the wire.
+  assert.deepEqual(disclosedModalities({ inputModalities: ['image', 'text'] }), [
+    'image',
+    'text',
+  ])
+  assert.deepEqual(disclosedModalities({ inputModalities: ['image', 'audio'] }), [
+    'image',
+  ])
+  assert.deepEqual(disclosedModalities({}), [])
+  assert.deepEqual(disclosedModalities({ inputModalities: 'text' }), [])
+
+  assert.deepEqual(
+    discoveredModelProfile({
+      id: 'gpt-x',
+      name: 'GPT X',
+      description: 'official-catalog only',
+      contextWindow: 128000,
+      maxTokens: 8192,
+      inputModalities: ['text', 'image'],
+    }),
+    {
+      id: 'gpt-x',
+      name: 'GPT X',
+      contextWindow: 128000,
+      maxTokens: 8192,
+      input: ['text', 'image'],
+    },
+  )
+  // A candidate carrying only an id yields no empty fields.
+  assert.deepEqual(discoveredModelProfile({ id: 'bare' }), { id: 'bare' })
+  assert.deepEqual(
+    discoveredModelProfile({ id: 'unknown-modalities', inputModalities: [] }),
+    { id: 'unknown-modalities' },
   )
 })

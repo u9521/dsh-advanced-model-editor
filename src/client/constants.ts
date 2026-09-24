@@ -4,6 +4,7 @@ import type {
   Modality,
   Protocol,
   ThinkingLevel,
+  ToolUpdate,
   Transport,
 } from './types.ts'
 
@@ -153,6 +154,7 @@ export const TRANSPORTS: Transport[] = [
 export const CACHE_RETENTIONS: CacheRetention[] = ['none', 'short', 'long']
 export const OFFICIAL_THINKING: string[] = ['enabled', 'disabled']
 export const OFFICIAL_REASONING: string[] = ['off', 'low', 'high', 'max']
+export const TOOL_UPDATES: ToolUpdate[] = ['in-history', 'addition-only']
 
 export const DEFAULT_RETRYABLE_CODES: string[] = [
   'EMPTY_RESPONSE',

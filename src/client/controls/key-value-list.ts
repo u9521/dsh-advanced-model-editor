@@ -127,7 +127,7 @@ export function KeyValueList(props: KeyValueListProps) {
               props.onChange?.(next)
             },
           },
-          e(primitives.IconCloseOutline16, { size: 16 }),
+          e(primitives.IconCloseOutlineRegular, { size: 16 }),
         ),
       ),
     ),
@@ -142,7 +142,7 @@ export function KeyValueList(props: KeyValueListProps) {
         style: { marginTop: '8px' },
         onClick: add,
       },
-      e(primitives.IconPlusOutline16, { size: 14 }),
+      e(primitives.IconPlusOutlineRegular, { size: 14 }),
       tr(
         levels
           ? 'controls.keyValue.efforts.add'

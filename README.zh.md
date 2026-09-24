@@ -7,13 +7,10 @@ LLM 提供方配置——覆盖自定义提供方命名空间（`llm-pi-ai`）�
 
 ![界面截图](docs/pics/screenshot.png)
 
-## DSH 版本兼容性
+## 环境要求
 
-| 插件版本 | 兼容 DSH 版本 | 说明 |
-| :--- | :--- | :--- |
-| **main（当前）** | **`>= 0.1.5-rc.1`** | 全面对齐 DSH 0.1.5-rc.1 官方规范（包含新增的思考预算字段名、vLLM 优先级、max_output_tokens 支持、DeepSeek-V41-Flash 官方模型与历史最新 system 生效模式等） |
-
-> **提示**：若你的 DSH 处于旧版本，请使用对应历史 release 或检出对应 tag；当前最新代码不再向后兼容 0.1.2 之前的旧版 DSH 运行时。
+- **DSH** `>= 0.1.7-rc.2` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
+- **Node.js** `^22.19 || >=24`。
 
 ---
 
@@ -70,9 +67,9 @@ pnpm install
 pnpm run build
 ```
 
-官方 DSH 客户端打包预设已随仓库内置在 `external/deepseek-harness/packages/client/`，
-因此不再需要 DSH 源码检出：`pnpm run build` 会用项目自身的依赖依次执行 `tsc`
-（类型检查 + 生成 `lib/types/`）和 `tsdown`（打包 `lib/index.js` + `lib/client.js`）。
+`pnpm run build` 会用项目自身的依赖依次执行 `tsc`（类型检查 + 生成 `lib/types/`）
+和 `tsdown`（打包 `lib/index.js` + `lib/client.js`），无需 DSH 源码检出。浏览器产物是
+面向 DSH 客户端模块表的自包含闭包工厂，完整的平台模块契约集中在 `tsdown.config.mjs`。
 
 可用以下命令验证构建：
 
@@ -99,7 +96,6 @@ dsh plugin --profile web add ~/.dsh/plugins/dsh-advanced-model-editor
 | `pnpm test` | 先完整构建，再运行测试套件（`node --test`） |
 | `pnpm run fmt` | 用 Prettier 格式化源码与配置文件 |
 | `pnpm run fmt:check` | 检查代码格式是否符合规范 |
-| `pnpm run sync` | 从上游同步内置的 DSH 客户端打包预设（`--check` 或 `--yes`） |
 
 ---
 

@@ -11,6 +11,7 @@ import {
   THINKING_FORMATS,
   THINKING_LEVELS,
   THINKING_TOKEN_BUDGET_FIELDS,
+  TOOL_UPDATES,
   TRANSPORTS,
 } from './constants.ts'
 import type {
@@ -18,6 +19,7 @@ import type {
   CacheRetention,
   Protocol,
   ThinkingLevel,
+  ToolUpdate,
   Transport,
 } from './types.ts'
 import { isObject, owns, tr } from './utils.ts'
@@ -176,54 +178,44 @@ export function validateModel(
 
 export function validateRetryPolicy(value: unknown): string[] {
   const errors: string[] = []
-  if (
-    !isObject(value) ||
-    !['normal', 'always'].includes(String(value.mode)) ||
-    !isObject(value.backoff)
-  )
+  if (!isObject(value) || (value.mode !== 'normal' && value.mode !== 'always'))
     return [tr('validation.retry')]
-  numberError(
-    value.backoff.initialDelayMs,
-    'field.initialDelayMs',
-    errors,
-    Number.MIN_VALUE,
-    MAX_TIMER_DELAY_MS,
-    false,
+  // `backoff` is optional upstream; a present one must be an object.
+  if (value.backoff !== undefined && !isObject(value.backoff))
+    return [tr('validation.retry')]
+  const backoff = isObject(value.backoff) ? value.backoff : {}
+  for (const [field, min, max] of [
+    ['initialDelayMs', Number.MIN_VALUE, MAX_TIMER_DELAY_MS],
+    ['maxDelayMs', Number.MIN_VALUE, MAX_TIMER_DELAY_MS],
+    ['jitterRatio', 0, 1],
+  ] as Array<[string, number, number]>) {
+    if (owns(backoff, field))
+      numberError(backoff[field], `field.${field}`, errors, min, max, false)
+  }
+  if (
+    owns(backoff, 'initialDelayMs') &&
+    owns(backoff, 'maxDelayMs') &&
+    Number(backoff.initialDelayMs) > Number(backoff.maxDelayMs)
   )
-  numberError(
-    value.backoff.maxDelayMs,
-    'field.maxDelayMs',
-    errors,
-    Number.MIN_VALUE,
-    MAX_TIMER_DELAY_MS,
-    false,
-  )
-  numberError(
-    value.backoff.jitterRatio,
-    'field.jitterRatio',
-    errors,
-    0,
-    1,
-    false,
-  )
-  if (Number(value.backoff.initialDelayMs) > Number(value.backoff.maxDelayMs))
     errors.push(tr('validation.backoffOrder'))
   if (value.mode === 'normal') {
-    numberError(
-      value.maxRetries,
-      'field.maxRetries',
-      errors,
-      0,
-      Number.MAX_SAFE_INTEGER,
-      true,
-    )
+    if (owns(value, 'maxRetries'))
+      numberError(
+        value.maxRetries,
+        'field.maxRetries',
+        errors,
+        0,
+        Number.MAX_SAFE_INTEGER,
+        true,
+      )
     if (
-      !Array.isArray(value.retryableCodes) ||
-      value.retryableCodes.length === 0 ||
-      value.retryableCodes.some(
-        (code) => typeof code !== 'string' || code.trim().length === 0,
-      ) ||
-      new Set(value.retryableCodes).size !== value.retryableCodes.length
+      owns(value, 'retryableCodes') &&
+      (!Array.isArray(value.retryableCodes) ||
+        value.retryableCodes.length === 0 ||
+        value.retryableCodes.some(
+          (code) => typeof code !== 'string' || code.trim().length === 0,
+        ) ||
+        new Set(value.retryableCodes).size !== value.retryableCodes.length)
     )
       errors.push(tr('validation.retryCodes'))
   }
@@ -534,6 +526,13 @@ export function validateOfficialProfile(profile: unknown): string[] {
           )
             errors.push(
               tr('validation.invalid', { field: `${path}.systemPromptUpdate` }),
+            )
+          if (
+            owns(entry, 'toolUpdate') &&
+            !TOOL_UPDATES.includes(entry.toolUpdate as ToolUpdate)
+          )
+            errors.push(
+              tr('validation.invalid', { field: `${path}.toolUpdate` }),
             )
           for (const field of ['contextWindow', 'maxTokens'])
             if (owns(entry, field))

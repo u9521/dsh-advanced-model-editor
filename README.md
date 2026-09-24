@@ -9,13 +9,11 @@ and conflict rules as the official settings UI.
 
 ![Screenshot](docs/pics/screenshot.png)
 
-## DSH Version Compatibility
+## Requirements
 
-| Plugin Version | Compatible DSH Version | Notes |
-| :--- | :--- | :--- |
-| **main (Current)** | **`>= 0.1.5-rc.1`** | Fully aligned with DSH 0.1.5-rc.1 specifications (including thinkingTokenBudgetField, vllmPriority, supportsMaxOutputTokens, DeepSeek-V41-Flash catalog entry, in-history systemPromptUpdate, and latest platform modules) |
-
-> **Note**: If your DSH version is older, please checkout the corresponding historical tag or release. The current main branch no longer maintains backward compatibility with legacy DSH versions prior to 0.1.5.
+- **DSH** `>= 0.1.7-rc.2` — only the current release is supported. There is no
+  backward-compatibility layer for older DSH versions.
+- **Node.js** `^22.19 || >=24`.
 
 ---
 
@@ -72,10 +70,10 @@ pnpm install
 pnpm run build
 ```
 
-The official DSH client-bundle preset is vendored under
-`external/deepseek-harness/packages/client/`, so no DSH source checkout is needed:
 `pnpm run build` runs `tsc` (type check + emit `lib/types/`) and `tsdown` (bundle
-`lib/index.js` + `lib/client.js`) with the project's own dependencies.
+`lib/index.js` + `lib/client.js`) with the project's own dependencies — no DSH source
+checkout is needed. The browser half is a self-contained closure factory for the DSH
+client module table; the whole platform-module contract lives in `tsdown.config.mjs`.
 
 Verify the build with:
 
@@ -102,7 +100,6 @@ Then **restart web** (`dsh web`) and **hard-refresh** the browser (Cmd+Shift+R).
 | `pnpm test` | Full build, then run the test suite (`node --test`) |
 | `pnpm run fmt` | Format source and config files with Prettier |
 | `pnpm run fmt:check` | Check code formatting compliance |
-| `pnpm run sync` | Sync the vendored DSH client-bundle preset from upstream (`--check` or `--yes`) |
 
 ---
 

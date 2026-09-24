@@ -1,13 +1,8 @@
 #!/usr/bin/env node
 /**
- * Build script — DSH official tsdown pipeline, vendored into this repository.
- *
- * The official client-bundle preset lives at
- * external/deepseek-harness/packages/client/tsdown.client.ts (a copy of
- * deepseek-ai/deepseek-harness packages/client/tsdown.client.ts), so no
- * external DSH source checkout is needed:
- *   1. `tsc -p tsconfig.json` (type check + emit lib/types)
- *   2. `tsdown -c tsdown.config.mjs` (lib/index.js + lib/client.js)
+ * Build script:
+ *   1. `tsc -p tsconfig.json` — type check + emit `lib/types`
+ *   2. `tsdown -c tsdown.config.mjs` — emit `lib/index.js` + `lib/client.js`
  *
  * `--check` runs tsc --noEmit instead of emitting and bundling.
  */

@@ -175,7 +175,7 @@ export function AdvancedModelsPage({
             'aria-label': tr('refresh'),
             onClick: load,
           },
-          e(primitives.IconRefreshOutline16, { size: 16 }),
+          e(primitives.IconRefreshOutlineRegular, { size: 16 }),
         ),
         e(
           'button',
@@ -188,7 +188,7 @@ export function AdvancedModelsPage({
                 value === 'builtin' ? undefined : 'builtin',
               ),
           },
-          e(primitives.IconPlusOutline16, { size: 14 }),
+          e(primitives.IconPlusOutlineRegular, { size: 14 }),
           tr('addBuiltIn'),
         ),
         e(
@@ -202,7 +202,7 @@ export function AdvancedModelsPage({
                 value === 'custom' ? undefined : 'custom',
               ),
           },
-          e(primitives.IconPlusOutline16, { size: 14 }),
+          e(primitives.IconPlusOutlineRegular, { size: 14 }),
           tr('addCustom'),
         ),
       ),

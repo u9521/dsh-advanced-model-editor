@@ -10,7 +10,7 @@ export type Transport = 'sse' | 'websocket' | 'websocket-cached' | 'auto'
 
 export type CacheRetention = 'none' | 'short' | 'long'
 
-export type RetryMode = 'normal' | 'always'
+export type ToolUpdate = 'in-history' | 'addition-only'
 
 export type BudgetLevel = 'minimal' | 'low' | 'medium' | 'high'
 
@@ -68,8 +68,24 @@ export interface ModelProfile {
   imagePixelBudget?: number | 'low'
   imageMaxBytes?: number
   systemPromptUpdate?: 'in-history'
+  toolUpdate?: ToolUpdate
   reasoningEfforts?: false | ReasoningEfforts
   compat?: CompatProfile
+}
+
+/**
+ * One model an endpoint disclosed through `llm/discoverModels`
+ * (`LlmDiscoveredModel` on the wire). Every field is optional: an endpoint
+ * may report only the id.
+ */
+export interface DiscoveredModel {
+  id?: string
+  name?: string
+  description?: string
+  contextWindow?: number
+  maxTokens?: number
+  /** Accepted input types the endpoint disclosed; absent means unknown. */
+  inputModalities?: Modality[]
 }
 
 export interface BackoffConfig {
@@ -78,12 +94,25 @@ export interface BackoffConfig {
   jitterRatio?: number
 }
 
-export interface RetryPolicyConfig {
-  mode?: RetryMode
+/** Retry only the configured transient failure codes. */
+export interface NormalRetryPolicyConfig {
+  mode: 'normal'
   maxRetries?: number
   retryableCodes?: string[]
   backoff?: BackoffConfig
 }
+
+/** Retry every model-request failure until success, cancellation, or disposal. */
+export interface AlwaysRetryPolicyConfig {
+  mode: 'always'
+  backoff?: BackoffConfig
+}
+
+/** Provider-owned model-request retry policy; `mode` discriminates the two shapes. */
+export type RetryPolicyConfig =
+  NormalRetryPolicyConfig | AlwaysRetryPolicyConfig
+
+export type RetryMode = RetryPolicyConfig['mode']
 
 export interface ProviderProfile {
   apiKeyEnv?: string
@@ -134,11 +163,15 @@ export interface OfficialProfile {
   [key: string]: unknown
 }
 
+/**
+ * The subset of a redacted settings namespace view that this page reads.
+ * `remote.settings.describe()` returns more (`schema`, `secrets`, `applies`,
+ * `autoGenerate`, and a resolved `base`); none of it is needed here.
+ */
 export interface SettingsNamespaceView {
   ns: string
   value?: unknown
   user?: unknown
-  base?: unknown
   revision: number
 }
 

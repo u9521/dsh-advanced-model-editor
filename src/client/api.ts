@@ -1,7 +1,7 @@
 import type { ModelApi, RpcEnvelope } from './types.ts'
 
 /**
- * Creates a ModelApi adapter over DSH Typert Remote services (DSH >=0.1.5-rc.1).
+ * Creates a ModelApi adapter over DSH Typert Remote services.
  * @param ctx - Cordis client context providing ctx.remote.
  */
 export function createModelApi(ctx: any): ModelApi {

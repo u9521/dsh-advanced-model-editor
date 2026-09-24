@@ -389,12 +389,18 @@ export const zh: LocaleDictionary = {
       imagePixelBudget: '单图像素预算',
       imageMaxBytes: '单图最大字节',
       systemPromptUpdate: '系统提示词更新方式',
+      toolUpdate: '工具列表更新方式',
       reasoningEfforts: '推理档位映射',
       compat: '模型兼容性',
     },
     systemPromptUpdate: {
       default: '默认（首条生效）',
       inHistory: '最新条生效（in-history）',
+    },
+    toolUpdate: {
+      default: '默认（每次请求完整工具列表）',
+      inHistory: 'in-history（按序读取移除）',
+      additionOnly: '仅新增（addition-only / defer_loading）',
     },
     reasoning: {
       inherit: '继承模型目录',
@@ -417,6 +423,7 @@ export const zh: LocaleDictionary = {
       existing: '已存在',
       contextWindow: '上下文 {value}',
       maxTokens: '输出上限 {value}',
+      inputModalities: '输入：{value}',
       open: '获取可用模型',
     },
     override: { idPlaceholder: '内置模型 ID' },

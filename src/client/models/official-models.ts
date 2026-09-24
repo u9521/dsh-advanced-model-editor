@@ -101,7 +101,7 @@ export function OfficialModelList({
                   onChange(nextModels)
                 },
               },
-              e(primitives.IconCopyOutline16, { size: 16 }),
+              e(primitives.IconCopyOutlineRegular, { size: 16 }),
             ),
             e(
               'button',
@@ -116,7 +116,7 @@ export function OfficialModelList({
                     models.filter((_, modelIndex) => modelIndex !== index),
                   ),
               },
-              e(primitives.IconCloseOutline16, { size: 16 }),
+              e(primitives.IconCloseOutlineRegular, { size: 16 }),
             ),
           ),
         ),
@@ -225,6 +225,31 @@ export function OfficialModelList({
             }),
           ),
           e(
+            'label',
+            { className: 'dsh-ma-field dsh-ma-wide' },
+            e(
+              'span',
+              { className: 'dsh-ma-field-label' },
+              tr('models.field.toolUpdate'),
+            ),
+            e(Select, {
+              value: model.toolUpdate,
+              choices: [
+                {
+                  value: 'in-history',
+                  labelKey: 'models.toolUpdate.inHistory',
+                },
+                {
+                  value: 'addition-only',
+                  labelKey: 'models.toolUpdate.additionOnly',
+                },
+              ],
+              disabled,
+              unsetKey: 'models.toolUpdate.default',
+              onChange: (nextValue) => update(index, 'toolUpdate', nextValue),
+            }),
+          ),
+          e(
             'div',
             { className: 'dsh-ma-field dsh-ma-wide' },
             e(
@@ -305,7 +330,7 @@ export function OfficialModelList({
         disabled,
         onClick: () => onChange([...models, { id: '' }]),
       },
-      e(primitives.IconPlusOutline16, { size: 14 }),
+      e(primitives.IconPlusOutlineRegular, { size: 14 }),
       tr('models.action.add'),
     ),
   )

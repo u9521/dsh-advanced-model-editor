@@ -1,6 +1,7 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-import type { ModelProfile, RpcEnvelope } from '../types.ts'
+import { disclosedModalities } from '../state.ts'
+import type { DiscoveredModel, RpcEnvelope } from '../types.ts'
 import { formatCapacity, responseMessage, tr, valueOf } from '../utils.ts'
 
 export interface DiscoveryProbe {
@@ -16,18 +17,10 @@ export interface DiscoveryProbe {
   apiKey?: string
 }
 
-export interface DiscoveredModel {
-  id?: string
-  name?: string
-  description?: string
-  contextWindow?: number
-  maxTokens?: number
-}
-
 export interface ModelDiscoveryDialogProps {
   probe: DiscoveryProbe
   existing: Set<string>
-  onApply: (models: ModelProfile[]) => void
+  onApply: (models: DiscoveredModel[]) => void
   onClose: () => void
 }
 
@@ -177,6 +170,26 @@ export function ModelDiscoveryDialog({
             { className: 'dsh-ma-models' },
             filtered.map((candidate) => {
               const exists = existing.has(candidate.id ?? '')
+              const modalities = disclosedModalities(candidate)
+              const facts = [
+                typeof candidate.contextWindow === 'number'
+                  ? tr('models.discovery.contextWindow', {
+                      value: formatCapacity(candidate.contextWindow),
+                    })
+                  : null,
+                typeof candidate.maxTokens === 'number'
+                  ? tr('models.discovery.maxTokens', {
+                      value: formatCapacity(candidate.maxTokens),
+                    })
+                  : null,
+                modalities.length > 0
+                  ? tr('models.discovery.inputModalities', {
+                      value: modalities
+                        .map((item) => tr(`controls.modality.${item}`))
+                        .join(', '),
+                    })
+                  : null,
+              ].filter(Boolean)
               return e(
                 'label',
                 {
@@ -203,26 +216,8 @@ export function ModelDiscoveryDialog({
                     ? `${candidate.name} (${candidate.id})`
                     : candidate.id,
                 ),
-                typeof candidate.contextWindow === 'number' ||
-                  typeof candidate.maxTokens === 'number'
-                  ? e(
-                      'span',
-                      { className: 'dsh-ma-route' },
-                      [
-                        typeof candidate.contextWindow === 'number'
-                          ? tr('models.discovery.contextWindow', {
-                              value: formatCapacity(candidate.contextWindow),
-                            })
-                          : null,
-                        typeof candidate.maxTokens === 'number'
-                          ? tr('models.discovery.maxTokens', {
-                              value: formatCapacity(candidate.maxTokens),
-                            })
-                          : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · '),
-                    )
+                facts.length > 0
+                  ? e('span', { className: 'dsh-ma-route' }, facts.join(' · '))
                   : null,
                 exists
                   ? e(
