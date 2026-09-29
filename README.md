@@ -11,7 +11,7 @@ and conflict rules as the official settings UI.
 
 ## Requirements
 
-- **DSH** `>= 0.1.7-rc.2` — only the current release is supported. There is no
+- **DSH** `>= 0.2.0-rc.1` — only the current release is supported. There is no
   backward-compatibility layer for older DSH versions.
 - **Node.js** `^22.19 || >=24`.
 
