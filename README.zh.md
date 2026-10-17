@@ -15,7 +15,7 @@ LLM 提供方配置——覆盖自定义提供方命名空间（`llm-pi-ai`）�
 
 ## 环境要求
 
-- **DSH** `>= 0.2.1-rc.1` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
+- **DSH** `>= 0.2.1-rc.2` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
 - **Node.js** `^22.19 || >=24`。
 
 ---
@@ -100,6 +100,8 @@ dsh plugin --profile web add ~/.dsh/plugins/dsh-advanced-model-editor
 | `pnpm run build` | 完整构建（`tsc` 类型检查 + 生成 `lib/` 产物） |
 | `pnpm run check` | 仅类型检查（`tsc --noEmit`），不产出文件 |
 | `pnpm test` | 先完整构建，再运行测试套件（`node --test`） |
+| `pnpm run lint` | 一次跑完 ESLint、类型检查、测试套件与 Prettier 检查（CI 门禁） |
+| `pnpm run lint:fix` | 先应用 ESLint 自动修复，再用 Prettier 重写文件 |
 | `pnpm run fmt` | 用 Prettier 格式化源码与配置文件 |
 | `pnpm run fmt:check` | 检查代码格式是否符合规范 |
 

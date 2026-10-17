@@ -19,7 +19,7 @@ so a keyless route no longer reads as a missing credential.
 
 ## Requirements
 
-- **DSH** `>= 0.2.1-rc.1` — only the current release is supported. There is no
+- **DSH** `>= 0.2.1-rc.2` — only the current release is supported. There is no
   backward-compatibility layer for older DSH versions.
 - **Node.js** `^22.19 || >=24`.
 
@@ -106,6 +106,8 @@ Then **restart web** (`dsh web`) and **hard-refresh** the browser (Cmd+Shift+R).
 | `pnpm run build` | Full build (runs `tsc` type check + generates `lib/` bundles) |
 | `pnpm run check` | Type check only (`tsc --noEmit`) without emitting files |
 | `pnpm test` | Full build, then run the test suite (`node --test`) |
+| `pnpm run lint` | ESLint, type check, test suite, and Prettier check in one pass (CI gate) |
+| `pnpm run lint:fix` | Apply ESLint fixes, then rewrite the files with Prettier |
 | `pnpm run fmt` | Format source and config files with Prettier |
 | `pnpm run fmt:check` | Check code formatting compliance |
 

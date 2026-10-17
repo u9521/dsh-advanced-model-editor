@@ -38,7 +38,6 @@ function loadBundle() {
       load: (handoff) => factories.set(handoff.id, handoff.factory),
     },
   }
-  // eslint-disable-next-line no-new-func
   new Function('window', source(BUNDLE))(window)
   const external = new Map([
     ['react', stubReact()],

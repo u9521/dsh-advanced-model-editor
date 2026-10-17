@@ -19,7 +19,7 @@
   "icon": "./icon.svg",
   "engines": {
     "node": "^22.19 || >=24",
-    "dsh": ">=0.2.1-rc.1"
+    "dsh": ">=0.2.1-rc.2"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-client-ui-primitives": "^0.2.0-rc.1",
@@ -50,8 +50,10 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/build.mjs --check",
     "test": "pnpm run build && node --test test/*.test.mjs",
-    "fmt": "prettier --write \"src/**/*.ts\" \"scripts/*.mjs\" \"*.mjs\" \"*.json\" \"*.yml\"",
-    "fmt:check": "prettier --check \"src/**/*.ts\" \"scripts/*.mjs\" \"*.mjs\" \"*.json\" \"*.yml\""
+    "fmt": "prettier --write \"src/**/*.ts\" \"test/**/*.mjs\" \"scripts/*.mjs\" \"*.mjs\" \"*.js\" \"*.json\" \"*.yml\"",
+    "fmt:check": "prettier --check \"src/**/*.ts\" \"test/**/*.mjs\" \"scripts/*.mjs\" \"*.mjs\" \"*.js\" \"*.json\" \"*.yml\"",
+    "lint": "eslint src/ test/ scripts/ && node scripts/build.mjs --check && prettier --check \"src/**/*.ts\" \"test/**/*.mjs\" \"scripts/*.mjs\" \"*.mjs\" \"*.js\" \"*.json\" \"*.yml\"",
+    "lint:fix": "eslint src/ test/ scripts/ --fix && prettier --write \"src/**/*.ts\" \"test/**/*.mjs\" \"scripts/*.mjs\" \"*.mjs\" \"*.js\" \"*.json\" \"*.yml\""
   },
   "keywords": [
     "dsh-plugin",
@@ -60,18 +62,22 @@
     "settings"
   ],
   "devDependencies": {
-    "@deepseek-ai/cordis": "^4.0.4",
-    "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.1",
-    "@deepseek-ai/dsh-client-locale": "0.2.1-rc.1",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-rc.1",
-    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.1",
+    "@deepseek-ai/cordis": "~4.0.5",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-locale": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.1-rc.2",
+    "@eslint/js": "^9.39.5",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.1",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0",
     "prettier": "^3.9.6",
     "react": "^18.3.1",
     "tsdown": "^0.22.14",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.71.2"
   },
   "exports": {
     ".": {

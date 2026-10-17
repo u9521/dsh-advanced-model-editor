@@ -41,8 +41,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Check code formatting
-        run: pnpm run fmt:check
+      - name: Run linter and typecheck
+        run: pnpm run lint
 
       - name: Run build and tests
         run: pnpm test

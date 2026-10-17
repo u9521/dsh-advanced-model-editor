@@ -34,7 +34,7 @@ function createMockCtx(overrides = {}) {
             },
           ],
         }),
-        discoverModels: async (settingsNs, request) => ({
+        discoverModels: async (_settingsNs, _request) => ({
           ok: true,
           value: [
             { id: 'model-1', name: 'Model 1', contextWindow: 4096 },
@@ -43,15 +43,15 @@ function createMockCtx(overrides = {}) {
         }),
       },
       credentials: {
-        describe: async (refs) => ({
+        describe: async (_refs) => ({
           ok: true,
           value: {
             DEEPSEEK_API_KEY: { configured: true },
             OPENAI_API_KEY: { configured: false },
           },
         }),
-        set: async (ref, value) => ({ ok: true, value: undefined }),
-        unset: async (ref) => ({ ok: true, value: undefined }),
+        set: async (_ref, _value) => ({ ok: true, value: undefined }),
+        unset: async (_ref) => ({ ok: true, value: undefined }),
       },
       ...overrides.remote,
     },

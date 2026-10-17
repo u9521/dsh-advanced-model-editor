@@ -24,7 +24,7 @@ const ID = '@local/dsh-advanced-model-editor'
 /**
  * Platform modules the shell shares into the frozen module table: the exact
  * `PLATFORM_MODULES` list `@deepseek-ai/dsh-client-web` publishes (DSH
- * 0.2.1-rc.1). Each stays an external `require`; everything else is bundled.
+ * 0.2.1-rc.2). Each stays an external `require`; everything else is bundled.
  * `dsh-client-store` is deliberately absent — it left the platform table, so a
  * value import from it would now fail the module table at runtime.
  */
