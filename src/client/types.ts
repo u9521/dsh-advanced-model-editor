@@ -170,9 +170,31 @@ export interface OfficialProfile {
  */
 export interface SettingsNamespaceView {
   ns: string
+  /** Serialized schemastery schema envelope (`schema.toJSON()`); rehydrate before reading. */
+  schema: unknown
   value?: unknown
+  /** Redacted composition base layer, with defaults resolved. */
+  base?: unknown
   user?: unknown
   revision: number
+}
+
+/**
+ * Authentication a provider route performs without a credential reference in
+ * its profile (`LlmNativeAuth` on the DSH 0.2.1 wire). `env` lists the
+ * environment variables the route's own authentication reads, in lookup
+ * order; `oauth` reports whether a stored OAuth sign-in can authenticate it.
+ */
+export interface LlmNativeAuth {
+  env: readonly string[]
+  oauth: boolean
+}
+
+/** Redacted credential state for one reference (`CredentialInfo` on the wire). */
+export interface CredentialInfo {
+  configured: boolean
+  source?: string
+  writable: boolean
 }
 
 export interface ProviderRow {
@@ -182,9 +204,18 @@ export interface ProviderRow {
   settingsPath: string[]
   active?: boolean
   declared?: boolean
-  api: ModelApi
+  /** Route endpoint used when the profile sets no `baseURL`; absent when none is fixed. */
+  defaultBaseURL?: string
+  /** Environment variables the route uses to construct its endpoint. */
+  baseURLEnv?: string[]
+  /** Provider-native authentication the route performs without a credential reference. */
+  nativeAuth?: LlmNativeAuth
+  /** Configuration diagnostic for repair; unaffected models may remain serviceable. */
+  error?: string
+  /** Redacted state per native-auth reference, when the page read it. */
+  credentialChecks?: Readonly<Record<string, CredentialInfo>>
+  /** Whether the user layer carries this route's profile. */
   userAdded?: boolean
-  configured?: ProviderProfile
 }
 
 export interface EditorState {
@@ -202,17 +233,15 @@ export interface RpcEnvelope {
 }
 
 /**
- * The settings/LLM Web API surface used by the advanced model pages.
- * Adapted from `ctx.remote` (llm, settings, credentials) by `createModelApi`.
+ * The LLM and credential Web API surface used by the advanced model pages.
+ * Adapted from `ctx.remote` by `createModelApi`. Settings reads and writes
+ * are deliberately absent: DSH 0.2.1 routes them through the shared
+ * `ctx.configForms` mirror and write queue (see ./settings.ts).
  */
 export interface ModelApi {
   llm: {
     providers(input?: unknown): Promise<RpcEnvelope>
     discoverModels(input?: unknown): Promise<RpcEnvelope>
-  }
-  settings: {
-    describe(input?: unknown): Promise<RpcEnvelope>
-    mutate(input: unknown): Promise<RpcEnvelope>
   }
   credentials: {
     describe(input?: unknown): Promise<RpcEnvelope>

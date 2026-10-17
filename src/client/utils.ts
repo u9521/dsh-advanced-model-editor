@@ -1,18 +1,4 @@
-import { THINKING_LEVELS } from './constants.ts'
-import type {
-  ProviderProfile,
-  ReasoningEfforts,
-  RpcEnvelope,
-  Translator,
-} from './types.ts'
-
-export function createDefaultReasoningEfforts(): ReasoningEfforts {
-  const result: ReasoningEfforts = {}
-  for (const level of THINKING_LEVELS) {
-    result[level] = level === 'off' ? null : level
-  }
-  return result
-}
+import type { ProviderProfile, RpcEnvelope } from './types.ts'
 
 /** Accepted capacity spellings: a decimal count with an optional unit suffix. */
 const CAPACITY_PATTERN =
@@ -87,24 +73,6 @@ export function formatCapacity(value: number): string {
   if (value % (1024 * 1024) === 0) return `${String(value / (1024 * 1024))}Mi`
   if (value % 1024 === 0) return `${String(value / 1024)}Ki`
   return String(value)
-}
-
-let translate: Translator = (key) => key
-
-export function setTranslator(next: Translator): void {
-  translate = typeof next === 'function' ? next : (key) => key
-}
-
-export function tr(
-  key: string,
-  vars?: Record<string, string | number>,
-): string {
-  let value = translate(key)
-  if (typeof value !== 'string') value = key
-  if (vars)
-    for (const [name, replacement] of Object.entries(vars))
-      value = value.replaceAll(`{${name}}`, String(replacement))
-  return value
 }
 
 export function isObject(value: unknown): value is Record<string, unknown> {

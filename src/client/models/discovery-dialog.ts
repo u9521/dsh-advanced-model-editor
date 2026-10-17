@@ -2,7 +2,8 @@ import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
 import { disclosedModalities } from '../state.ts'
 import type { DiscoveredModel, RpcEnvelope } from '../types.ts'
-import { formatCapacity, responseMessage, tr, valueOf } from '../utils.ts'
+import { tr } from '../i18n.ts'
+import { formatCapacity, responseMessage, valueOf } from '../utils.ts'
 
 export interface DiscoveryProbe {
   clientApi: {

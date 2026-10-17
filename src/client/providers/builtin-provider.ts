@@ -1,13 +1,15 @@
 import * as React from 'react'
 import { SETTINGS_NS } from '../constants.ts'
 import { Field } from '../controls/index.ts'
-import type { ModelApi, ProviderRow, SettingsNamespaceView } from '../types.ts'
-import { responseMessage, tr, valueOf } from '../utils.ts'
+import type { ConfigForm } from '../settings.ts'
+import { conflictMessage, writeOps } from '../settings.ts'
+import type { ProviderRow } from '../types.ts'
+import { tr } from '../i18n.ts'
+import { responseMessage } from '../utils.ts'
 
 export interface AddBuiltInProviderProps {
-  namespace: SettingsNamespaceView
   rows: ProviderRow[]
-  api: ModelApi
+  form: ConfigForm
   writable: boolean
   reload: () => unknown
   close: () => void
@@ -16,9 +18,8 @@ export interface AddBuiltInProviderProps {
 const e = React.createElement
 
 export function AddBuiltInProvider({
-  namespace,
   rows,
-  api,
+  form,
   writable,
   reload,
   close,
@@ -36,20 +37,21 @@ export function AddBuiltInProvider({
       return
     }
     setBusy(true)
+    setFailure('')
     try {
-      valueOf(
-        await api.settings.mutate({
-          ns: SETTINGS_NS,
-          expectedRevision: namespace.revision,
-          ops: [
-            {
-              op: 'set',
-              path: [...selected.settingsPath],
-              value: {},
-            },
-          ],
-        }),
-      )
+      // The shared write queue owns the revision fence; `false` means the
+      // Host refused and the mirror was reloaded behind us.
+      const accepted = await writeOps(form, [
+        {
+          op: 'set',
+          path: [...selected.settingsPath],
+          value: {},
+        },
+      ])
+      if (!accepted) {
+        setFailure(conflictMessage())
+        return
+      }
       await reload()
       close()
     } catch (error) {
@@ -60,7 +62,7 @@ export function AddBuiltInProvider({
   }
   return e(
     'section',
-    { className: 'dsh-ma-create' },
+    { className: 'dsh-ma-create', 'data-settings-ns': SETTINGS_NS },
     e('h3', { className: 'dsh-ma-group-title' }, tr('builtin.title')),
     e(
       Field,

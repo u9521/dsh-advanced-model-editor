@@ -1,15 +1,21 @@
 # dsh-advanced-model-editor
 
-一个 DeepSeek Harness WebUI 插件，在「设置」页新增**模型高级设置**区块，用于管理
+一个 DeepSeek Harness WebUI 插件，在「设置」页新增**模型高级配置**区块，用于管理
 LLM 提供方配置——覆盖自定义提供方命名空间（`llm-pi-ai`）与官方提供方命名空间
 （`llm-deepseek`），包括内置/自定义提供方、模型列表、推理与思考参数、请求头、重试策略等，
 并沿用官方设置页的校验与冲突规则。
+
+读写统一走 DSH 的共享设置服务（`ctx.configForms` / `ctx.settingsSchema`），
+因此本页面与官方「模型」页共享同一份文档镜像与写队列，不会互相覆盖 revision。
+只有对应命名空间真正被服务时该区块才出现；同时展示 DSH 0.2.1 提供的提供方事实——
+配置继承的端点（`defaultBaseURL` / `baseURLEnv`）、路由自带认证（`nativeAuth`，含 OAuth）
+以及目录诊断信息，免密钥路由不再被误报为「缺少密钥」。
 
 ![界面截图](docs/pics/screenshot.png)
 
 ## 环境要求
 
-- **DSH** `>= 0.2.0-rc.1` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
+- **DSH** `>= 0.2.1-rc.1` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
 - **Node.js** `^22.19 || >=24`。
 
 ---
@@ -22,7 +28,7 @@ LLM 提供方配置——覆盖自定义提供方命名空间（`llm-pi-ai`）�
 dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
 ```
 
-安装后**重启 web**（`dsh web`）并**硬刷新浏览器**（Cmd+Shift+R）即可。插件以**模型高级设置**出现在设置页。
+安装后**重启 web**（`dsh web`）并**硬刷新浏览器**（Cmd+Shift+R）即可。插件以**模型高级配置**出现在设置页。
 
 ### 升级 (远程安装)
 

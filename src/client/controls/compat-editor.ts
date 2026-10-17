@@ -1,13 +1,13 @@
 import * as React from 'react'
+import type { CompatField } from '../compat.ts'
 import {
-  CACHE_CONTROL_FORMATS,
-  MAX_TOKENS_FIELDS,
-  PROTOCOL_COMPAT_FIELDS,
-  THINKING_FORMATS,
-  THINKING_TOKEN_BUDGET_FIELDS,
-} from '../constants.ts'
+  compatFields,
+  compatValueConfigured,
+  filterCompatForProtocol,
+} from '../compat.ts'
+import { tr } from '../i18n.ts'
 import type { CompatProfile } from '../types.ts'
-import { isObject, tr } from '../utils.ts'
+import { isObject } from '../utils.ts'
 import { Field } from './field.ts'
 import { Select, TextInput } from './inputs.ts'
 
@@ -22,218 +22,172 @@ export interface CompatEditorProps {
 
 const e = React.createElement
 
+/** Outcome of reading the JSON-object control's text. */
+type ParseResult = { ok: true; value: unknown } | { ok: false }
+
+/**
+ * Read one JSON-object control's text.
+ * @param text - the control's current text.
+ * @returns the parsed value, or a failure the control reports.
+ */
+function parseJsonObject(text: string): ParseResult {
+  if (text.trim().length === 0) return { ok: false }
+  try {
+    return { ok: true, value: JSON.parse(text) }
+  } catch {
+    return { ok: false }
+  }
+}
+
+/**
+ * Free-form JSON object control for `chatTemplateKwargs` / `chatTemplateArgs`.
+ *
+ * These two keys carry a dict whose shape the adapter's own schema owns, so the
+ * control keeps the text and reports whether it parses instead of duplicating
+ * that shape here. It is a module of its own because it is the only control that
+ * holds text that may be invalid mid-typing.
+ */
+function JsonObjectField({
+  field,
+  value,
+  disabled,
+  onChange,
+}: {
+  field: CompatField
+  value: unknown
+  disabled?: boolean
+  onChange: (value: unknown) => void
+}) {
+  const label = tr(`controls.compat.${field.key}`)
+  const [text, setText] = React.useState(() =>
+    value === undefined ? '' : JSON.stringify(value, null, 2),
+  )
+  const parsed = parseJsonObject(text)
+  const blank = text.trim().length === 0
+  return e(
+    'div',
+    { className: 'dsh-ma-field dsh-ma-wide' },
+    e('span', { className: 'dsh-ma-field-label' }, label),
+    e('textarea', {
+      className: 'dsh-ma-input',
+      rows: 4,
+      spellCheck: false,
+      value: text,
+      disabled,
+      placeholder: tr(`controls.compat.${field.key}Placeholder`),
+      'aria-label': label,
+      onChange: (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const next = event.target.value
+        setText(next)
+        if (next.trim().length === 0) {
+          onChange(undefined)
+          return
+        }
+        const result = parseJsonObject(next)
+        if (result.ok) onChange(result.value)
+      },
+    }),
+    blank || parsed.ok
+      ? null
+      : e(
+          'span',
+          { className: 'dsh-ma-route', role: 'alert' },
+          tr('validation.json'),
+        ),
+  )
+}
+
+/**
+ * The compatibility card for one route.
+ *
+ * The field set, the control kind per field and the protocol filter all come
+ * from `../compat.ts`: this module renders the table rather than restating it,
+ * so a field the adapter offers can no longer be allow-listed, validated and
+ * yet missing a control.
+ */
 export function CompatEditor(props: CompatEditorProps) {
   const [open, setOpen] = React.useState(props.defaultOpen ?? false)
-  const compat = (isObject(props.value) ? props.value : {}) as CompatProfile
+  // Read through a plain record: the key comes from the table, so the value is
+  // only meaningful once `compatFields` has named it.
+  const compat = (isObject(props.value) ? props.value : {}) as Record<
+    string,
+    unknown
+  >
+  const read = (key: string): unknown => compat[key]
+  const fields = compatFields(props.api)
   const set = (field: string, value: unknown) => {
-    const next = { ...compat }
-    if (value === undefined || value === '')
-      delete next[field as keyof CompatProfile]
-    else next[field as keyof CompatProfile] = value as never
-    const cleanKeys = Object.entries(next).filter(([_, v]) => {
-      if (v === undefined || v === null || v === '') return false
-      if (
-        typeof v === 'object' &&
-        !Array.isArray(v) &&
-        Object.keys(v).length === 0
-      )
-        return false
-      return true
-    })
-    props.onChange?.(cleanKeys.length === 0 ? undefined : next)
+    const next: Record<string, unknown> = { ...compat }
+    if (value === undefined || value === '') delete next[field]
+    else next[field] = value
+    props.onChange?.(filterCompatForProtocol(next as CompatProfile, props.api))
   }
+  const configuredCount = Object.entries(compat).filter(
+    ([key, value]) =>
+      fields.some((field) => field.key === key) && compatValueConfigured(value),
+  ).length
 
-  const allowed =
-    PROTOCOL_COMPAT_FIELDS[props.api || 'openai-completions'] ||
-    PROTOCOL_COMPAT_FIELDS['openai-completions']
-
-  const configuredCount = Object.entries(compat).filter(([key, value]) => {
-    if (!allowed.includes(key)) return false
-    if (value === undefined || value === null || value === '') return false
-    if (
-      typeof value === 'object' &&
-      !Array.isArray(value) &&
-      Object.keys(value).length === 0
-    )
-      return false
-    return true
-  }).length
-
-  const boolSelect = (name: keyof CompatProfile, labelKey: string) =>
-    e(
-      Field,
-      { labelKey, key: name },
-      e(Select, {
-        value:
-          typeof compat[name] === 'boolean' ? String(compat[name]) : undefined,
-        choices: [
-          { value: 'true', labelKey: 'controls.boolean.supported' },
-          { value: 'false', labelKey: 'controls.boolean.unsupported' },
-        ],
-        disabled: props.disabled,
-        unsetKey: 'controls.select.auto',
-        onChange: (value) =>
-          set(name, value === undefined ? undefined : value === 'true'),
-      }),
-    )
-
-  let gridContent: React.ReactNode = null
-
-  if (props.api === 'anthropic-messages') {
-    gridContent = e(
-      'div',
-      { className: 'dsh-ma-grid' },
-      boolSelect('supportsTemperature', 'controls.compat.supportsTemperature'),
-      boolSelect(
-        'forceAdaptiveThinking',
-        'controls.compat.forceAdaptiveThinking',
-      ),
-      boolSelect(
-        'supportsEagerToolInputStreaming',
-        'controls.compat.supportsEagerToolInputStreaming',
-      ),
-      boolSelect(
-        'supportsCacheControlOnTools',
-        'controls.compat.supportsCacheControlOnTools',
-      ),
-      boolSelect('allowEmptySignature', 'controls.compat.allowEmptySignature'),
-      boolSelect('supportsStrictTools', 'controls.compat.supportsStrictTools'),
-      boolSelect(
-        'supportsLongCacheRetention',
-        'controls.compat.supportsLongCacheRetention',
-      ),
-    )
-  } else if (props.api === 'openai-responses') {
-    gridContent = e(
-      'div',
-      { className: 'dsh-ma-grid' },
-      boolSelect(
-        'supportsDeveloperRole',
-        'controls.compat.supportsDeveloperRole',
-      ),
-      boolSelect('supportsStrictMode', 'controls.compat.supportsStrictMode'),
-      boolSelect(
-        'supportsMaxOutputTokens',
-        'controls.compat.supportsMaxOutputTokens',
-      ),
-      boolSelect(
-        'supportsLongCacheRetention',
-        'controls.compat.supportsLongCacheRetention',
-      ),
-    )
-  } else {
-    // openai-completions or default
-    gridContent = e(
-      'div',
-      { className: 'dsh-ma-grid' },
-      e(
+  const control = (field: CompatField) => {
+    const labelKey = `controls.compat.${field.key}`
+    if (field.kind === 'boolean')
+      return e(
         Field,
-        { labelKey: 'controls.compat.thinkingFormat' },
+        { labelKey, key: field.key },
         e(Select, {
-          value: compat.thinkingFormat,
-          choices: [...THINKING_FORMATS],
-          choiceKeyPrefix: 'controls.thinkingFormat',
+          value:
+            typeof read(field.key) === 'boolean'
+              ? String(read(field.key))
+              : undefined,
+          choices: [
+            { value: 'true', labelKey: 'controls.boolean.supported' },
+            { value: 'false', labelKey: 'controls.boolean.unsupported' },
+          ],
           disabled: props.disabled,
           unsetKey: 'controls.select.auto',
-          onChange: (value) => set('thinkingFormat', value),
+          onChange: (value) =>
+            set(field.key, value === undefined ? undefined : value === 'true'),
         }),
-      ),
-      boolSelect(
-        'supportsReasoningEffort',
-        'controls.compat.supportsReasoningEffort',
-      ),
-      boolSelect(
-        'supportsDeveloperRole',
-        'controls.compat.supportsDeveloperRole',
-      ),
-      e(
+      )
+    if (field.kind === 'enum')
+      return e(
         Field,
-        { labelKey: 'controls.compat.maxTokensField' },
+        { labelKey, key: field.key },
         e(Select, {
-          value: compat.maxTokensField,
-          choices: [...MAX_TOKENS_FIELDS],
-          choiceKeyPrefix: 'controls.maxTokensField',
+          value:
+            typeof read(field.key) === 'string'
+              ? (read(field.key) as string)
+              : undefined,
+          choices: [...(field.choices ?? [])],
           disabled: props.disabled,
           unsetKey: 'controls.select.auto',
-          onChange: (value) => set('maxTokensField', value),
+          onChange: (value) => set(field.key, value),
         }),
-      ),
-      boolSelect(
-        'supportsUsageInStreaming',
-        'controls.compat.supportsUsageInStreaming',
-      ),
-      boolSelect(
-        'supportsFinishReason',
-        'controls.compat.supportsFinishReason',
-      ),
-      boolSelect('supportsStore', 'controls.compat.supportsStore'),
-      boolSelect('supportsStrictMode', 'controls.compat.supportsStrictMode'),
-      boolSelect(
-        'supportsLongCacheRetention',
-        'controls.compat.supportsLongCacheRetention',
-      ),
-      e(
+      )
+    if (field.kind === 'integer')
+      return e(
         Field,
-        { labelKey: 'controls.compat.cacheControlFormat' },
-        e(Select, {
-          value: compat.cacheControlFormat,
-          choices: [...CACHE_CONTROL_FORMATS],
-          choiceKeyPrefix: 'controls.cacheControlFormat',
-          disabled: props.disabled,
-          unsetKey: 'controls.select.auto',
-          onChange: (value) => set('cacheControlFormat', value),
-        }),
-      ),
-      boolSelect(
-        'requiresToolResultName',
-        'controls.compat.requiresToolResultName',
-      ),
-      boolSelect(
-        'requiresAssistantAfterToolResult',
-        'controls.compat.requiresAssistantAfterToolResult',
-      ),
-      boolSelect(
-        'requiresThinkingAsText',
-        'controls.compat.requiresThinkingAsText',
-      ),
-      boolSelect(
-        'requiresReasoningContentOnAssistantMessages',
-        'controls.compat.requiresReasoningContentOnAssistantMessages',
-      ),
-      boolSelect(
-        'supportsThinkingTokenBudget',
-        'controls.compat.supportsThinkingTokenBudget',
-      ),
-      e(
-        Field,
-        { labelKey: 'controls.compat.thinkingTokenBudgetField' },
-        e(Select, {
-          value: compat.thinkingTokenBudgetField,
-          choices: [...THINKING_TOKEN_BUDGET_FIELDS],
-          disabled: props.disabled,
-          unsetKey: 'controls.select.auto',
-          onChange: (value) => set('thinkingTokenBudgetField', value),
-        }),
-      ),
-      e(
-        Field,
-        { labelKey: 'controls.compat.vllmPriority' },
+        { labelKey, key: field.key },
         e(TextInput, {
           type: 'number',
           step: 1,
-          value: compat.vllmPriority,
-          placeholderKey: 'controls.compat.vllmPriorityPlaceholder',
+          value: read(field.key) as number | undefined,
+          placeholderKey: `${labelKey}Placeholder`,
           disabled: props.disabled,
           onChange: (value) =>
             set(
-              'vllmPriority',
+              field.key,
               typeof value === 'number' && Number.isFinite(value)
                 ? Math.trunc(value)
                 : undefined,
             ),
         }),
-      ),
-    )
+      )
+    return e(JsonObjectField, {
+      key: field.key,
+      field,
+      value: read(field.key),
+      disabled: props.disabled,
+      onChange: (value) => set(field.key, value),
+    })
   }
 
   return e(
@@ -287,6 +241,16 @@ export function CompatEditor(props: CompatEditorProps) {
         tr(open ? 'action.collapse' : 'action.expand'),
       ),
     ),
-    open ? e('div', { className: 'dsh-ma-card-body' }, gridContent) : null,
+    open
+      ? e(
+          'div',
+          { className: 'dsh-ma-card-body' },
+          e(
+            'div',
+            { className: 'dsh-ma-grid' },
+            fields.map((field) => control(field)),
+          ),
+        )
+      : null,
   )
 }

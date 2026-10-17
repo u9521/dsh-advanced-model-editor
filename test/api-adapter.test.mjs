@@ -42,23 +42,6 @@ function createMockCtx(overrides = {}) {
           ],
         }),
       },
-      settings: {
-        describe: async () => ({
-          ok: true,
-          value: {
-            writable: true,
-            hasDocument: true,
-            namespaces: [
-              { ns: 'llm-pi-ai', revision: 1 },
-              { ns: 'llm-deepseek', revision: 2 },
-            ],
-          },
-        }),
-        mutate: async (ns, ops, expectedRevision) => ({
-          ok: true,
-          value: { ns, revision: (expectedRevision ?? 0) + 1 },
-        }),
-      },
       credentials: {
         describe: async (refs) => ({
           ok: true,
@@ -171,38 +154,49 @@ test('llm.discoverModels extracts settingsNs and forwards discovery request', as
   })
 })
 
-test('settings.describe and settings.mutate delegate cleanly', async () => {
-  let mutatedArgs
+test('the adapter exposes no settings transport of its own', () => {
+  // DSH 0.2.1 made ctx.configForms the only describe reader and the only
+  // revision queue, so a page-level settings transport would bypass both.
+  const api = createModelApi(createMockCtx())
+  assert.equal(api.settings, undefined)
+  assert.deepEqual(Object.keys(api).sort(), ['credentials', 'llm'])
+})
+
+test('llm.providers forwards the DSH 0.2.1 directory facts', async () => {
   const ctx = createMockCtx({
     remote: {
-      settings: {
-        describe: async () => ({
+      llm: {
+        listProviders: async () => ({ ok: true, value: [] }),
+        listConfigurableProviders: async () => ({
           ok: true,
-          value: { writable: true, namespaces: [{ ns: 'llm-pi-ai', revision: 5 }] },
+          value: [
+            {
+              provider: 'anthropic',
+              displayName: 'Anthropic',
+              settingsNs: 'llm-pi-ai',
+              settingsPath: ['providers', 'anthropic'],
+              defaultBaseURL: 'https://api.anthropic.com',
+              baseURLEnv: ['ANTHROPIC_BASE_URL'],
+              nativeAuth: { env: ['ANTHROPIC_API_KEY'], oauth: true },
+              error: 'catalog drift',
+            },
+          ],
         }),
-        mutate: async (ns, ops, expectedRevision) => {
-          mutatedArgs = { ns, ops, expectedRevision }
-          return { ok: true, value: { ns, revision: 6 } }
-        },
       },
     },
   })
   const api = createModelApi(ctx)
-
-  const describeEnv = await api.settings.describe()
-  assert.equal(describeEnv.result.ok, true)
-  assert.equal(describeEnv.result.value.writable, true)
-
-  const mutateEnv = await api.settings.mutate({
-    ns: 'llm-pi-ai',
-    ops: [{ op: 'set', path: ['providers', 'test'], value: {} }],
-    expectedRevision: 5,
-  })
-  assert.equal(mutateEnv.result.ok, true)
-  assert.deepEqual(mutatedArgs, {
-    ns: 'llm-pi-ai',
-    ops: [{ op: 'set', path: ['providers', 'test'], value: {} }],
-    expectedRevision: 5,
+  const providers = (await api.llm.providers()).result.value.providers
+  assert.deepEqual(providers[0], {
+    provider: 'anthropic',
+    displayName: 'Anthropic',
+    settingsNs: 'llm-pi-ai',
+    settingsPath: ['providers', 'anthropic'],
+    active: false,
+    defaultBaseURL: 'https://api.anthropic.com',
+    baseURLEnv: ['ANTHROPIC_BASE_URL'],
+    nativeAuth: { env: ['ANTHROPIC_API_KEY'], oauth: true },
+    error: 'catalog drift',
   })
 })
 
@@ -238,7 +232,10 @@ test('credentials describe, set, and unset forward parameters and return expecte
   assert.deepEqual(describeEnv.result.value.MY_KEY, { configured: true })
 
   // set with { ref, value }
-  const setEnv = await api.credentials.set({ ref: 'MY_KEY', value: 'secret123' })
+  const setEnv = await api.credentials.set({
+    ref: 'MY_KEY',
+    value: 'secret123',
+  })
   assert.equal(setEnv.result.ok, true)
   assert.equal(setRef, 'MY_KEY')
   assert.equal(setValue, 'secret123')

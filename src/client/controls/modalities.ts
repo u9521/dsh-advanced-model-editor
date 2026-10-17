@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { MODALITIES } from '../constants.ts'
-import { tr } from '../utils.ts'
+import { tr } from '../i18n.ts'
 
 export interface ModalitiesProps {
   value?: string[]

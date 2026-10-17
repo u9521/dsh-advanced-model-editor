@@ -1,8 +1,8 @@
 import type { LocaleDictionary } from './zh.ts'
 
 export const en: LocaleDictionary = {
-  nav: 'Advanced Model Settings',
-  title: 'Advanced Model Settings',
+  nav: 'Advanced Model Configuration',
+  title: 'Advanced Model Configuration',
   refresh: 'Refresh provider settings',
   addBuiltIn: 'Add provider',
   addCustom: 'Add custom provider',
@@ -216,12 +216,14 @@ export const en: LocaleDictionary = {
       'Provider ID must start with a lowercase letter and contain only lowercase letters, numbers, and hyphens.',
     duplicateProvider: 'This Provider ID already exists.',
     noBuiltIn: 'No built-in providers are available to add.',
-    deleteOnlyUserAdded: 'Only user-added llm-pi-ai providers can be deleted.',
     quantumExceedsMax: '{field} cannot exceed its corresponding limit.',
     fileRefreshOrder: 'File refresh margin must be less than file expiry.',
     textOnlyImageLimits: 'Text-only models cannot declare image parameters.',
     thinkingDisabledReasoning:
       'Reasoning effort must be off when thinking is disabled.',
+    writeConflict:
+      'This configuration changed elsewhere. It has been reloaded; review and retry.',
+    json: 'Enter a valid JSON object.',
   },
   action: {
     delete: 'Delete',
@@ -242,12 +244,15 @@ export const en: LocaleDictionary = {
     label: 'API key ({status})',
     configured: 'configured',
     notConfigured: 'not configured',
+    nativeConfigured: 'native auth · {refs} set',
+    nativeOAuth: 'native auth · OAuth sign-in available',
+    nativeMissing: 'native auth · {refs} not detected',
+    nativeNone: 'native auth · no key required',
   },
   delete: {
     withCredential:
       'Deleting removes this provider configuration and stored API key reference {ref}. Other providers sharing it will lose the key too.',
     providerOnly: 'Deleting removes this provider configuration.',
-    wait: 'Wait {seconds}s',
   },
   group: {
     connection: 'Connection',
@@ -346,6 +351,12 @@ export const en: LocaleDictionary = {
       forceAdaptiveThinking: 'Force adaptive thinking',
       allowEmptySignature: 'Allow empty thinking signature',
       supportsStrictTools: 'Strict tools support',
+      chatTemplateKwargs: 'Chat template kwargs',
+      chatTemplateKwargsPlaceholder:
+        '{"enable_thinking": {"$var": "thinking.enabled"}}',
+      chatTemplateArgs: 'Chat template args',
+      chatTemplateArgsPlaceholder:
+        '{"thinking_budget": {"$var": "thinking.budget"}}',
     },
     thinkingFormat: {
       openai: 'OpenAI',

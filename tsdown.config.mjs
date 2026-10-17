@@ -22,9 +22,11 @@ import { defineConfig } from 'tsdown'
 const ID = '@local/dsh-advanced-model-editor'
 
 /**
- * Platform modules the shell shares into the frozen module table (mirrors
- * `packages/client/web/src/platform.ts` upstream). Each stays an external
- * `require`; everything else is bundled.
+ * Platform modules the shell shares into the frozen module table: the exact
+ * `PLATFORM_MODULES` list `@deepseek-ai/dsh-client-web` publishes (DSH
+ * 0.2.1-rc.1). Each stays an external `require`; everything else is bundled.
+ * `dsh-client-store` is deliberately absent — it left the platform table, so a
+ * value import from it would now fail the module table at runtime.
  */
 const PLATFORM_MODULES = [
   'react',
@@ -32,10 +34,11 @@ const PLATFORM_MODULES = [
   'react-dom',
   'react-dom/client',
   '@deepseek-ai/cordis',
-  '@deepseek-ai/dsh-client-store',
   '@deepseek-ai/dsh-client-ui-slots',
+  '@deepseek-ai/dsh-client-web-react',
   '@deepseek-ai/dsh-client-ui-primitives',
-  '@deepseek-ai/dsh-client-ui-dockkit',
+  '@deepseek-ai/dsh-client-ui-attachment',
+  '@deepseek-ai/dsh-client-schema-form',
 ]
 
 const isPlatformModule = (specifier) => PLATFORM_MODULES.includes(specifier)

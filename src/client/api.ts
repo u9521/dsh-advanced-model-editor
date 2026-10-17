@@ -2,6 +2,13 @@ import type { ModelApi, RpcEnvelope } from './types.ts'
 
 /**
  * Creates a ModelApi adapter over DSH Typert Remote services.
+ *
+ * DSH 0.2.1 owns the settings document through `ctx.configForms` /
+ * `ctx.settingsSchema`, so this adapter no longer exposes
+ * `settings.describe` / `settings.mutate`: reads and writes ride the shared
+ * mirror and its ordered write queue (see ./settings.ts). What remains here is
+ * the provider directory and the two write faces the shared services do not
+ * cover — credential records and endpoint interrogation.
  * @param ctx - Cordis client context providing ctx.remote.
  */
 export function createModelApi(ctx: any): ModelApi {
@@ -52,6 +59,24 @@ export function createModelApi(ctx: any): ModelApi {
             : [],
           active: active.has(entry.provider),
           ...(entry.declared !== undefined ? { declared: entry.declared } : {}),
+          // DSH 0.2.1 directory facts: the endpoint a profile inherits, the
+          // variables that build it, and the route's own authentication. A
+          // keyless route must not read as "missing credential".
+          ...(entry.defaultBaseURL !== undefined
+            ? { defaultBaseURL: entry.defaultBaseURL }
+            : {}),
+          ...(entry.baseURLEnv !== undefined
+            ? { baseURLEnv: [...entry.baseURLEnv] }
+            : {}),
+          ...(entry.nativeAuth !== undefined
+            ? {
+                nativeAuth: {
+                  env: [...(entry.nativeAuth.env || [])],
+                  oauth: entry.nativeAuth.oauth === true,
+                },
+              }
+            : {}),
+          ...(entry.error !== undefined ? { error: entry.error } : {}),
         }))
         for (const provider of registered) {
           if (declaredSet.has(provider.id)) continue
@@ -98,52 +123,6 @@ export function createModelApi(ctx: any): ModelApi {
           result: {
             ok: true,
             value: { models: res.value },
-          },
-        }
-      },
-    },
-
-    settings: {
-      async describe(): Promise<RpcEnvelope> {
-        const res = await remote.settings.describe()
-        if (!res.ok) {
-          return {
-            result: {
-              ok: false,
-              error: {
-                message: res.error?.message || 'Failed to describe settings',
-              },
-            },
-          }
-        }
-        return {
-          result: {
-            ok: true,
-            value: res.value,
-          },
-        }
-      },
-
-      async mutate(input: any): Promise<RpcEnvelope> {
-        const res = await remote.settings.mutate(
-          input.ns,
-          input.ops,
-          input.expectedRevision,
-        )
-        if (!res.ok) {
-          return {
-            result: {
-              ok: false,
-              error: {
-                message: res.error?.message || 'Failed to mutate settings',
-              },
-            },
-          }
-        }
-        return {
-          result: {
-            ok: true,
-            value: res.value,
           },
         }
       },

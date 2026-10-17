@@ -1,9 +1,5 @@
-import {
-  MODALITIES,
-  PROFILE_FIELDS,
-  PROTOCOL_COMPAT_FIELDS,
-  SETTINGS_NS,
-} from './constants.ts'
+import { filterCompatForProtocol } from './compat.ts'
+import { MODALITIES, PROFILE_FIELDS } from './constants.ts'
 import type {
   CompatProfile,
   DiscoveredModel,
@@ -11,11 +7,9 @@ import type {
   Modality,
   ModelProfile,
   ProviderProfile,
-  ProviderRow,
   SettingsNamespaceView,
-  SettingsPathOp,
 } from './types.ts'
-import { at, clone, equal, isObject, owns, tr } from './utils.ts'
+import { at, clone, isObject, owns } from './utils.ts'
 
 /**
  * The disclosed input types we can actually store, in wire order. An endpoint
@@ -78,92 +72,13 @@ export function hasUserProfile(
   return isObject(at(namespace?.user, path))
 }
 
-export function buildProfileOps(
-  path: string[],
-  initial: EditorState,
-  draft: ProviderProfile,
-  explicit: Record<string, boolean>,
-): SettingsPathOp[] {
-  return PROFILE_FIELDS.flatMap((field): SettingsPathOp[] => {
-    if (initial.explicit[field] && !explicit[field])
-      return [{ op: 'unset', path: [...path, field] }]
-    if (
-      explicit[field] &&
-      (!initial.explicit[field] || !equal(initial.profile[field], draft[field]))
-    )
-      return [
-        {
-          op: 'set',
-          path: [...path, field],
-          value: clone(draft[field]),
-        },
-      ]
-    return []
-  })
-}
-
-export function groupProviderRows(
-  rows: ProviderRow[],
-  namespace: SettingsNamespaceView,
-): { builtIn: ProviderRow[]; custom: ProviderRow[] } {
-  const builtIn: ProviderRow[] = []
-  const custom: ProviderRow[] = []
-  for (const row of rows) {
-    if (
-      row.settingsNs !== SETTINGS_NS ||
-      !hasUserProfile(namespace, row.settingsPath)
-    )
-      continue
-    const target = row.declared === true ? custom : builtIn
-    target.push({
-      ...row,
-      configured: clone<ProviderProfile>(
-        (at(namespace?.value, row.settingsPath) || {}) as ProviderProfile,
-      ),
-    })
-  }
-  return { builtIn, custom }
-}
-
-export function deleteProviderOps(row: ProviderRow): SettingsPathOp[] {
-  if (
-    row.userAdded !== true ||
-    row.settingsNs !== SETTINGS_NS ||
-    row.settingsPath.length !== 2 ||
-    row.settingsPath[0] !== 'providers'
-  ) {
-    throw new Error(tr('validation.deleteOnlyUserAdded'))
-  }
-  return [{ op: 'unset', path: [...row.settingsPath] }]
-}
-
 export function filterCompatByProtocol(
   compat: CompatProfile | undefined,
   api: string | undefined,
 ): CompatProfile | undefined {
-  if (!isObject(compat) || api === undefined) return compat
-  const allowed = PROTOCOL_COMPAT_FIELDS[api]
-  if (!allowed) return undefined
-  const filtered: Record<string, unknown> = {}
-  for (const [key, value] of Object.entries(compat)) {
-    if (
-      allowed.includes(key) &&
-      value !== undefined &&
-      value !== null &&
-      value !== ''
-    ) {
-      if (
-        typeof value === 'object' &&
-        !Array.isArray(value) &&
-        Object.keys(value).length === 0
-      )
-        continue
-      filtered[key] = value
-    }
-  }
-  return Object.keys(filtered).length === 0
-    ? undefined
-    : (filtered as CompatProfile)
+  // One rule lives in ./compat.ts: an unknown protocol falls back to the same
+  // set the editor renders, instead of dropping every key as it used to.
+  return filterCompatForProtocol(compat, api)
 }
 
 /**

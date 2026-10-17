@@ -1,7 +1,8 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
-import { THINKING_LEVELS } from '../constants.ts'
-import { isObject, tr } from '../utils.ts'
+import { reasoningLevelChoices } from '../choices.ts'
+import { tr } from '../i18n.ts'
+import { isObject } from '../utils.ts'
 import { Select, TextInput } from './inputs.ts'
 
 export interface KeyValueListProps {
@@ -16,17 +17,20 @@ const e = React.createElement
 export function KeyValueList(props: KeyValueListProps) {
   const values = isObject(props.value) ? props.value : {}
   const levels = props.kind === 'efforts'
+  // Levels come from the namespace schema (DSH 0.2.1 keeps them there), so a
+  // level the adapter stops accepting disappears from the picker with it.
+  const levelChoices = levels ? reasoningLevelChoices() : []
   const entries = levels
     ? Object.entries(values).sort(([a], [b]) => {
-        const indexA = THINKING_LEVELS.indexOf(a as any)
-        const indexB = THINKING_LEVELS.indexOf(b as any)
+        const indexA = levelChoices.indexOf(a)
+        const indexB = levelChoices.indexOf(b)
         return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB)
       })
     : Object.entries(values)
 
   const sortEfforts = (record: Record<string, string | number | null>) => {
     const sorted: Record<string, string | number | null> = {}
-    for (const level of THINKING_LEVELS) {
+    for (const level of levelChoices) {
       if (Object.prototype.hasOwnProperty.call(record, level)) {
         sorted[level] = record[level]
       }
@@ -53,7 +57,7 @@ export function KeyValueList(props: KeyValueListProps) {
 
   const add = () => {
     if (levels) {
-      const available = THINKING_LEVELS.find(
+      const available = levelChoices.find(
         (level) => !Object.prototype.hasOwnProperty.call(values, level),
       )
       if (available !== undefined)
@@ -85,7 +89,7 @@ export function KeyValueList(props: KeyValueListProps) {
               value: key,
               disabled: props.disabled,
               allowUnset: false,
-              choices: [...THINKING_LEVELS],
+              choices: [...levelChoices],
               choiceKeyPrefix: 'controls.reasoningLevel',
               onChange: (nextKey) => setEntry(key, nextKey, value),
             })
@@ -138,7 +142,7 @@ export function KeyValueList(props: KeyValueListProps) {
         className: 'dsh-ma-button',
         disabled:
           props.disabled === true ||
-          (levels && entries.length === THINKING_LEVELS.length),
+          (levels && entries.length === levelChoices.length),
         style: { marginTop: '8px' },
         onClick: add,
       },

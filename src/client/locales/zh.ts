@@ -1,8 +1,8 @@
 export type LocaleDictionary = { [key: string]: string | LocaleDictionary }
 
 export const zh: LocaleDictionary = {
-  nav: '模型高级设置',
-  title: '模型高级设置',
+  nav: '模型高级配置',
+  title: '模型高级配置',
   refresh: '刷新 Provider 配置',
   addBuiltIn: '添加提供方',
   addCustom: '添加自定义提供方',
@@ -212,11 +212,12 @@ export const zh: LocaleDictionary = {
     route: 'Provider ID 需以小写字母开头，只能包含小写字母、数字和短横线。',
     duplicateProvider: '该 Provider ID 已存在。',
     noBuiltIn: '没有可添加的内置提供方。',
-    deleteOnlyUserAdded: '只能删除用户添加的 llm-pi-ai Provider。',
     quantumExceedsMax: '{field}不能超过对应的上限。',
     fileRefreshOrder: '文件提前刷新时间必须小于文件有效期。',
     textOnlyImageLimits: '纯文本模型不能设置图片参数。',
     thinkingDisabledReasoning: '禁用思考时推理档位只能为 off。',
+    writeConflict: '配置已被其他编辑修改，已重新读取，请确认后重试。',
+    json: '请输入合法的 JSON 对象。',
   },
   action: {
     delete: '删除',
@@ -237,12 +238,15 @@ export const zh: LocaleDictionary = {
     label: 'API 密钥（{status}）',
     configured: '已配置',
     notConfigured: '未配置',
+    nativeConfigured: '原生认证 · {refs} 已设置',
+    nativeOAuth: '原生认证 · 可用 OAuth 登录',
+    nativeMissing: '原生认证 · 未检测到 {refs}',
+    nativeNone: '原生认证 · 无需密钥',
   },
   delete: {
     withCredential:
       '删除将移除此 Provider 的配置，并清除已存储的 API 密钥引用 {ref}。若其他 Provider 也使用该引用，其密钥同样会被移除。',
     providerOnly: '删除将移除此 Provider 的配置。',
-    wait: '请等待 {seconds} 秒',
   },
   group: {
     connection: '连接',
@@ -340,6 +344,12 @@ export const zh: LocaleDictionary = {
       forceAdaptiveThinking: '强制开启自适应思考',
       allowEmptySignature: '允许空思考签名',
       supportsStrictTools: '严格工具 Schema 支持',
+      chatTemplateKwargs: 'Chat 模板关键字参数',
+      chatTemplateKwargsPlaceholder:
+        '{"enable_thinking": {"$var": "thinking.enabled"}}',
+      chatTemplateArgs: 'Chat 模板参数',
+      chatTemplateArgsPlaceholder:
+        '{"thinking_budget": {"$var": "thinking.budget"}}',
     },
     thinkingFormat: {
       openai: 'OpenAI',

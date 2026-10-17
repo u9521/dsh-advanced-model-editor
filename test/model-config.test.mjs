@@ -8,26 +8,38 @@ import {
   SETTINGS_NS,
   TOOL_UPDATES,
 } from '../src/client/constants.ts'
+import { planSave } from '../src/client/plan.ts'
 import {
-  buildProfileOps,
-  deleteProviderOps,
   disclosedModalities,
   discoveredModelProfile,
-  groupProviderRows,
+  hasUserProfile,
   initialEditorState,
   stripModelCompat,
 } from '../src/client/state.ts'
-import {
-  createDefaultReasoningEfforts,
-  formatCapacity,
-  parseCapacity,
-} from '../src/client/utils.ts'
+import { createDefaultReasoningEfforts } from '../src/client/choices.ts'
+import { formatCapacity, parseCapacity } from '../src/client/utils.ts'
 import {
   validateModel,
   validateOfficialProfile,
   validateProfile,
   validateRetryPolicy,
 } from '../src/client/validation.ts'
+
+/**
+ * A provider row with only the fields the save plan reads.
+ * @param provider - route id.
+ * @param declared - whether the user declared the route.
+ * @returns the row.
+ */
+function rowFor(provider, declared = true) {
+  return {
+    provider,
+    displayName: provider,
+    settingsNs: SETTINGS_NS,
+    settingsPath: ['providers', provider],
+    declared,
+  }
+}
 
 test('filters model compat precisely per protocol including openai-completions', () => {
   const profile = {
@@ -121,28 +133,128 @@ test('formats stored counts back in the shortest unit spelling', () => {
 test('declares every llm-pi-ai provider field', () => {
   assert.equal(SETTINGS_NS, 'llm-pi-ai')
   assert.deepEqual(PROFILE_FIELDS, [
-    'apiKeyEnv', 'displayName', 'api', 'baseURL', 'models', 'modelOverrides',
-    'compat', 'defaultContextWindow', 'defaultMaxTokens', 'defaultInput',
-    'headers', 'reasoning', 'thinkingBudgets', 'cacheRetention', 'transport',
-    'timeoutMs', 'websocketConnectTimeoutMs', 'streamIdleTimeoutMs',
-    'maxRequestImageBytes', 'requestImagePixelBudget', 'requestImageMaxBytes',
+    'apiKeyEnv',
+    'displayName',
+    'api',
+    'baseURL',
+    'models',
+    'modelOverrides',
+    'compat',
+    'defaultContextWindow',
+    'defaultMaxTokens',
+    'defaultInput',
+    'headers',
+    'reasoning',
+    'thinkingBudgets',
+    'cacheRetention',
+    'transport',
+    'timeoutMs',
+    'websocketConnectTimeoutMs',
+    'streamIdleTimeoutMs',
+    'maxRequestImageBytes',
+    'requestImagePixelBudget',
+    'requestImageMaxBytes',
     'retryPolicy',
   ])
+  // The field lists are what the page writes when a namespace schema is
+  // momentarily unreadable; they must stay a subset of what DSH declares so a
+  // fallback write can never invent a key the adapter would reject.
+  const dshProfileFields = [
+    'apiKeyEnv',
+    'displayName',
+    'api',
+    'baseURL',
+    'models',
+    'modelOverrides',
+    'compat',
+    'defaultContextWindow',
+    'defaultMaxTokens',
+    'defaultInput',
+    'headers',
+    'reasoning',
+    'thinkingBudgets',
+    'cacheRetention',
+    'transport',
+    'timeoutMs',
+    'websocketConnectTimeoutMs',
+    'streamIdleTimeoutMs',
+    'maxRequestImageBytes',
+    'requestImagePixelBudget',
+    'requestImageMaxBytes',
+    'retryPolicy',
+  ]
+  assert.deepEqual([...PROFILE_FIELDS].sort(), [...dshProfileFields].sort())
+  const dshOfficialFields = [
+    'apiKeyEnv',
+    'baseURL',
+    'thinking',
+    'reasoningEffort',
+    'maxTokens',
+    'defaultContextWindow',
+    'models',
+    'streamIdleTimeoutMs',
+    'maxRequestFilesBytes',
+    'maxInlineRequestImageBytes',
+    'maxImagesPerRequest',
+    'imageOffloadByteQuantum',
+    'inlineImageOffloadByteQuantum',
+    'imageOffloadCountQuantum',
+    'filesApiTimeoutMs',
+    'fileExpiresAfterSeconds',
+    'fileRefreshMarginSeconds',
+    'fileQuotaCleanupBatch',
+    'retryPolicy',
+  ]
+  assert.deepEqual([...OFFICIAL_FIELDS].sort(), [...dshOfficialFields].sort())
 })
 
 test('preserves untouched fields and emits only profile field operations', () => {
   const namespace = {
-    value: { providers: { cpa: { baseURL: 'https://old.example/v1', headers: { 'X-Trace': 'before' }, transport: 'auto' } } },
-    user: { providers: { cpa: { baseURL: 'https://old.example/v1', headers: { 'X-Trace': 'before' } } } },
+    value: {
+      providers: {
+        cpa: {
+          baseURL: 'https://old.example/v1',
+          headers: { 'X-Trace': 'before' },
+          transport: 'auto',
+        },
+      },
+    },
+    user: {
+      providers: {
+        cpa: {
+          baseURL: 'https://old.example/v1',
+          headers: { 'X-Trace': 'before' },
+        },
+      },
+    },
   }
   const initial = initialEditorState(namespace, ['providers', 'cpa'])
-  const draft = { ...initial.profile, headers: { 'X-Trace': 'after' }, transport: 'sse' }
+  const draft = {
+    ...initial.profile,
+    headers: { 'X-Trace': 'after' },
+    transport: 'sse',
+  }
   const explicit = { ...initial.explicit, transport: true }
 
-  assert.deepEqual(buildProfileOps(['providers', 'cpa'], initial, draft, explicit), [
-    { op: 'set', path: ['providers', 'cpa', 'headers'], value: { 'X-Trace': 'after' } },
-    { op: 'set', path: ['providers', 'cpa', 'transport'], value: 'sse' },
-  ])
+  assert.deepEqual(
+    planSave({
+      row: rowFor('cpa'),
+      draft,
+      baseline: initial,
+      explicit,
+      keyValue: '',
+      keyRef: 'CPA_API_KEY',
+      chosen: PROFILE_FIELDS,
+    }).ops,
+    [
+      {
+        op: 'set',
+        path: ['providers', 'cpa', 'headers'],
+        value: { 'X-Trace': 'after' },
+      },
+      { op: 'set', path: ['providers', 'cpa', 'transport'], value: 'sse' },
+    ],
+  )
 })
 
 test('unchecking an inherited override emits a field-scoped unset', () => {
@@ -151,9 +263,18 @@ test('unchecking an inherited override emits a field-scoped unset', () => {
     explicit: { timeoutMs: true, models: true },
   }
   const explicit = { timeoutMs: false, models: true }
-  assert.deepEqual(buildProfileOps(['providers', 'cpa'], initial, initial.profile, explicit), [
-    { op: 'unset', path: ['providers', 'cpa', 'timeoutMs'] },
-  ])
+  assert.deepEqual(
+    planSave({
+      row: rowFor('cpa'),
+      draft: initial.profile,
+      baseline: initial,
+      explicit,
+      keyValue: '',
+      keyRef: 'CPA_API_KEY',
+      chosen: PROFILE_FIELDS,
+    }).ops,
+    [{ op: 'unset', path: ['providers', 'cpa', 'timeoutMs'] }],
+  )
 })
 
 test('accepts an advanced profile covering transport, budgets, headers and retry', () => {
@@ -178,41 +299,72 @@ test('accepts an advanced profile covering transport, budgets, headers and retry
       retryableCodes: ['RATE_LIMIT', 'SERVER'],
       backoff: { initialDelayMs: 500, maxDelayMs: 10000, jitterRatio: 0.1 },
     },
-    models: [{
-      id: 'gateway-model',
-      input: ['text', 'image'],
-      reasoningEfforts: { off: null, high: 'high' },
-      compat: { thinkingFormat: 'openai' },
-    }],
+    models: [
+      {
+        id: 'gateway-model',
+        input: ['text', 'image'],
+        reasoningEfforts: { off: null, high: 'high' },
+        compat: { thinkingFormat: 'openai' },
+      },
+    ],
   }
   assert.deepEqual(validateProfile(profile), [])
 })
 
 test('rejects invalid retry, simultaneous catalog modes, and invalid model reasoning', () => {
-  assert.match(validateRetryPolicy({ mode: 'normal', maxRetries: 1, retryableCodes: [], backoff: { initialDelayMs: 20, maxDelayMs: 10, jitterRatio: 2 } }).join(' '), /retryCodes|backoffOrder/)
-  assert.match(validateProfile({ models: [{ id: 'one' }], modelOverrides: { one: {} } }).join(' '), /catalogConflict/)
-  assert.match(validateModel({ id: 'one', reasoningEfforts: { high: '' } }).join(' '), /validation\.invalid/)
+  assert.match(
+    validateRetryPolicy({
+      mode: 'normal',
+      maxRetries: 1,
+      retryableCodes: [],
+      backoff: { initialDelayMs: 20, maxDelayMs: 10, jitterRatio: 2 },
+    }).join(' '),
+    /retryCodes|backoffOrder/,
+  )
+  assert.match(
+    validateProfile({
+      models: [{ id: 'one' }],
+      modelOverrides: { one: {} },
+    }).join(' '),
+    /catalogConflict/,
+  )
+  assert.match(
+    validateModel({ id: 'one', reasoningEfforts: { high: '' } }).join(' '),
+    /validation\.invalid/,
+  )
 })
 
-test('shows only user-added profiles in built-in and custom sections', () => {
-  const namespace = { user: { providers: { deepseek: {}, cpa: { baseURL: 'https://gateway.example/v1' } } } }
-  const rows = [
-    { provider: 'deepseek', displayName: 'DeepSeek', settingsNs: SETTINGS_NS, settingsPath: ['providers', 'deepseek'], declared: false },
-    { provider: 'cpa', displayName: 'CPA', settingsNs: SETTINGS_NS, settingsPath: ['providers', 'cpa'], declared: true },
-    { provider: 'openai', displayName: 'OpenAI', settingsNs: SETTINGS_NS, settingsPath: ['providers', 'openai'], declared: false },
-  ]
-  const grouped = groupProviderRows(rows, namespace)
-  assert.deepEqual(grouped.builtIn.map((row) => row.provider), ['deepseek'])
-  assert.deepEqual(grouped.custom.map((row) => row.provider), ['cpa'])
+test('only user-layer profiles count as user-added rows', () => {
+  const namespace = {
+    user: {
+      providers: {
+        deepseek: {},
+        cpa: { baseURL: 'https://gateway.example/v1' },
+      },
+    },
+  }
+  assert.equal(hasUserProfile(namespace, ['providers', 'deepseek']), true)
+  assert.equal(hasUserProfile(namespace, ['providers', 'openai']), false)
+  assert.equal(hasUserProfile({ user: {} }, ['providers', 'deepseek']), false)
+  assert.equal(hasUserProfile(undefined, ['providers', 'deepseek']), false)
 })
 
-test('allows deletion only for a user-added llm-pi-ai route', () => {
-  assert.deepEqual(deleteProviderOps({
-    provider: 'cpa', declared: true, userAdded: true, settingsNs: SETTINGS_NS, settingsPath: ['providers', 'cpa'],
-  }), [{ op: 'unset', path: ['providers', 'cpa'] }])
-  assert.throws(() => deleteProviderOps({
-    provider: 'deepseek', declared: false, userAdded: false, settingsNs: SETTINGS_NS, settingsPath: ['providers', 'deepseek'],
-  }), /deleteOnlyUserAdded/)
+test('a native-auth route needs no credential reference', () => {
+  // DSH 0.2.1 reports the authentication a keyless route performs, so an
+  // empty apiKeyEnv is a complete profile rather than an unfinished one.
+  assert.deepEqual(
+    validateProfile({
+      api: 'anthropic-messages',
+      baseURL: 'https://api.anthropic.com',
+      models: [{ id: 'claude', contextWindow: 200000, maxTokens: 8192 }],
+    }),
+    [],
+  )
+  // A reference that IS present must still be a legal environment name.
+  assert.match(
+    validateProfile({ apiKeyEnv: 'not a ref' }).join(' '),
+    /credentialRef/,
+  )
 })
 
 test('accepts valid official profile with vision and Files API settings', () => {
@@ -388,7 +540,10 @@ test('accepts and validates compat fields (thinkingTokenBudgetField, vllmPriorit
   }
   assert.deepEqual(validateProfile(responsesProfile), [])
 
-  const strippedResponses = stripModelCompat(responsesProfile, 'openai-responses')
+  const strippedResponses = stripModelCompat(
+    responsesProfile,
+    'openai-responses',
+  )
   assert.equal(strippedResponses.compat.supportsMaxOutputTokens, false)
   assert.equal(strippedResponses.models[0].compat.supportsMaxOutputTokens, true)
   assert.equal(strippedResponses.models[0].compat.thinkingFormat, undefined)
@@ -483,10 +638,15 @@ test('creates default custom reasoning efforts in order from off to max', () => 
     xhigh: 'xhigh',
     max: 'max',
   })
-  assert.deepEqual(
-    Object.keys(defaultEfforts),
-    ['off', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'],
-  )
+  assert.deepEqual(Object.keys(defaultEfforts), [
+    'off',
+    'minimal',
+    'low',
+    'medium',
+    'high',
+    'xhigh',
+    'max',
+  ])
 })
 
 test('validates the official model toolUpdate mode', () => {
@@ -519,11 +679,19 @@ test('validates both retry policy shapes with upstream optionality', () => {
   )
   // `always` carries no bounded-only fields; a stray one is ignored, not fatal.
   assert.deepEqual(
-    validateRetryPolicy({ mode: 'always', maxRetries: 3, retryableCodes: ['SERVER'] }),
+    validateRetryPolicy({
+      mode: 'always',
+      maxRetries: 3,
+      retryableCodes: ['SERVER'],
+    }),
     [],
   )
   assert.deepEqual(
-    validateRetryPolicy({ mode: 'normal', maxRetries: 2, retryableCodes: ['SERVER'] }),
+    validateRetryPolicy({
+      mode: 'normal',
+      maxRetries: 2,
+      retryableCodes: ['SERVER'],
+    }),
     [],
   )
   // A malformed backoff, a missing/unknown mode, and an empty code list stay invalid.
@@ -532,7 +700,9 @@ test('validates both retry policy shapes with upstream optionality', () => {
     /validation\.retry/,
   )
   assert.match(
-    validateRetryPolicy({ mode: 'normal', backoff: { jitterRatio: 2 } }).join(' '),
+    validateRetryPolicy({ mode: 'normal', backoff: { jitterRatio: 2 } }).join(
+      ' ',
+    ),
     /validation\.number/,
   )
   assert.match(validateRetryPolicy({}).join(' '), /validation\.retry/)
@@ -548,13 +718,14 @@ test('validates both retry policy shapes with upstream optionality', () => {
 
 test('projects discovered models onto the pi-ai shape and adopts disclosed modalities', () => {
   // Only modalities the plugin can store survive the wire.
-  assert.deepEqual(disclosedModalities({ inputModalities: ['image', 'text'] }), [
-    'image',
-    'text',
-  ])
-  assert.deepEqual(disclosedModalities({ inputModalities: ['image', 'audio'] }), [
-    'image',
-  ])
+  assert.deepEqual(
+    disclosedModalities({ inputModalities: ['image', 'text'] }),
+    ['image', 'text'],
+  )
+  assert.deepEqual(
+    disclosedModalities({ inputModalities: ['image', 'audio'] }),
+    ['image'],
+  )
   assert.deepEqual(disclosedModalities({}), [])
   assert.deepEqual(disclosedModalities({ inputModalities: 'text' }), [])
 

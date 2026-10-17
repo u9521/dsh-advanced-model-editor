@@ -1,11 +1,12 @@
 import * as React from 'react'
 import {
   MAX_TIMER_DELAY_MS,
-  OFFICIAL_FIELDS,
   OFFICIAL_NS,
   OFFICIAL_REASONING,
   OFFICIAL_THINKING,
 } from '../constants.ts'
+import { commit, outcomeMessage } from '../commit.ts'
+import { planReplace } from '../plan.ts'
 import {
   CapacityInput,
   Field,
@@ -13,28 +14,23 @@ import {
   Select,
   TextInput,
 } from '../controls/index.ts'
-import { OfficialModelList } from '../models/index.ts'
+import { ModelList } from '../models/index.ts'
+import { OFFICIAL_MODEL_FIELDS } from '../models/model-fields.ts'
+import type { ConfigForm } from '../settings.ts'
 import type {
   ModelApi,
   OfficialProfile,
   SettingsNamespaceView,
-  SettingsPathOp,
 } from '../types.ts'
-import {
-  clone,
-  deriveKeyRef,
-  equal,
-  responseMessage,
-  setIn,
-  tr,
-  valueOf,
-} from '../utils.ts'
+import { tr } from '../i18n.ts'
+import { clone, deriveKeyRef, setIn } from '../utils.ts'
 import { validateOfficialProfile } from '../validation.ts'
 import { CredentialField } from './credential-field.ts'
 
 export interface OfficialProviderEditorProps {
   namespace: SettingsNamespaceView
   api: ModelApi
+  form: ConfigForm
   writable: boolean
   reload: () => unknown
 }
@@ -48,6 +44,7 @@ function translatedChoices(values: readonly string[], prefix: string) {
 export function OfficialProviderEditor({
   namespace,
   api,
+  form,
   writable,
   reload,
 }: OfficialProviderEditorProps) {
@@ -67,48 +64,35 @@ export function OfficialProviderEditor({
   const keyRef = draft.apiKeyEnv || deriveKeyRef('deepseek')
   const setField = (field: string, value: unknown) =>
     setDraft((current) => setIn(current, field, value))
-  const ops = OFFICIAL_FIELDS.flatMap((field): SettingsPathOp[] => {
-    const value = draft[field]
-    if (equal(value, baseline[field])) return []
-    return value === undefined
-      ? [{ op: 'unset', path: [field] }]
-      : [{ op: 'set', path: [field], value: clone(value) }]
-  })
-  if (keyDraft.trim() && !draft.apiKeyEnv)
+  // The official route has no override checkboxes: every field is the user's,
+  // so presence in the draft is what decides. `planReplace` diffs the same way
+  // the pi-ai editor's plan does, from one module rather than a second copy.
+  const ops = planReplace([], baseline, draft)
+  const keyValue = keyDraft.trim()
+  if (keyValue && !draft.apiKeyEnv)
     ops.push({ op: 'set', path: ['apiKeyEnv'], value: keyRef })
   const save = async () => {
     const errors = validateOfficialProfile({
       ...draft,
-      ...(keyDraft.trim() && !draft.apiKeyEnv ? { apiKeyEnv: keyRef } : {}),
+      ...(keyValue && !draft.apiKeyEnv ? { apiKeyEnv: keyRef } : {}),
     })
     if (errors.length) {
       setFailure(errors[0])
       return
     }
     setBusy(true)
-    try {
-      if (ops.length)
-        valueOf(
-          await api.settings.mutate({
-            ns: OFFICIAL_NS,
-            ops,
-            expectedRevision: namespace.revision,
-          }),
-        )
-      if (keyDraft.trim())
-        valueOf(
-          await api.credentials.set({
-            ref: keyRef,
-            value: keyDraft.trim(),
-          }),
-        )
-      setKeyDraft('')
-      await reload()
-    } catch (error) {
-      setFailure(responseMessage(error))
-    } finally {
-      setBusy(false)
-    }
+    setFailure('')
+    const outcome = await commit({
+      form,
+      ops,
+      api,
+      ...(keyValue ? { credential: { ref: keyRef, value: keyValue } } : {}),
+      reload,
+    })
+    if (outcome.kind === 'written') setKeyDraft('')
+    const message = outcomeMessage(outcome)
+    if (message !== undefined) setFailure(message)
+    setBusy(false)
   }
   const readOnly = !writable || busy
   return e(
@@ -156,6 +140,9 @@ export function OfficialProviderEditor({
                 revision: namespace.revision,
                 value: keyDraft,
                 disabled: readOnly,
+                hasNamedRef:
+                  typeof draft.apiKeyEnv === 'string' &&
+                  draft.apiKeyEnv.length > 0,
                 onChange: (value) => setKeyDraft(String(value || '')),
               }),
               e(
@@ -244,10 +231,13 @@ export function OfficialProviderEditor({
             'div',
             { className: 'dsh-ma-group' },
             e('h3', { className: 'dsh-ma-group-title' }, tr('group.models')),
-            e(OfficialModelList, {
+            e(ModelList, {
               value: draft.models,
+              shape: 'array',
+              fields: OFFICIAL_MODEL_FIELDS,
               disabled: readOnly,
-              onChange: (value) => setField('models', value),
+              onChange: (value) =>
+                setField('models', Array.isArray(value) ? value : []),
             }),
           ),
           e(

@@ -1,11 +1,11 @@
 import * as React from 'react'
 import {
   CACHE_RETENTIONS,
-  PROFILE_FIELDS,
   SETTINGS_NS,
   THINKING_LEVELS,
   TRANSPORTS,
 } from '../constants.ts'
+import { profileFieldChoices } from '../choices.ts'
 import {
   CapacityInput,
   CompatEditor,
@@ -18,35 +18,31 @@ import {
   TextInput,
 } from '../controls/index.ts'
 import { ModelList } from '../models/index.ts'
+import { PI_AI_MODEL_FIELDS } from '../models/model-fields.ts'
 import { BUDGET_LEVELS } from '../constants.ts'
+import { commit, outcomeMessage, removeProfile } from '../commit.ts'
+import { planSave } from '../plan.ts'
+import type { ConfigForm } from '../settings.ts'
 import type {
   BudgetLevel,
+  ModelApi,
   ProviderRow,
   SettingsNamespaceView,
 } from '../types.ts'
-import {
-  buildProfileOps,
-  initialEditorState,
-  stripModelCompat,
-} from '../state.ts'
-import {
-  clone,
-  deriveKeyRef,
-  isObject,
-  responseMessage,
-  setIn,
-  tr,
-  valueOf,
-} from '../utils.ts'
+import { initialEditorState } from '../state.ts'
+import { tr } from '../i18n.ts'
+import { clone, deriveKeyRef, isObject, setIn } from '../utils.ts'
 import { validateProfile } from '../validation.ts'
 import { CredentialField } from './credential-field.ts'
 
 export interface ProviderEditorProps {
   row: ProviderRow
+  /** Write faces for credentials and model discovery; the row carries data only. */
+  api: ModelApi
   namespace: SettingsNamespaceView
+  form: ConfigForm
   writable: boolean
   reload: () => unknown
-  timeout: (callback: () => void, delay: number) => () => void
 }
 
 const e = React.createElement
@@ -55,12 +51,28 @@ function translatedChoices(values: readonly string[], prefix: string) {
   return values.map((value) => ({ value, labelKey: `${prefix}.${value}` }))
 }
 
+/**
+ * The endpoint this route uses when the profile sets no `baseURL`: the
+ * adapter's fixed default, or the environment variables that build it. DSH
+ * 0.2.1 added both facts to the configurable-provider directory, and showing
+ * them stops an empty field from looking like a missing endpoint.
+ * @param row - one directory row.
+ * @returns the placeholder text, or undefined when the route declares neither.
+ */
+function inheritedEndpoint(row: ProviderRow): string | undefined {
+  if (row.defaultBaseURL !== undefined) return row.defaultBaseURL
+  if (row.baseURLEnv !== undefined && row.baseURLEnv.length > 0)
+    return row.baseURLEnv.map((name) => `\${${name}}`).join(' / ')
+  return undefined
+}
+
 export function ProviderEditor({
   row,
+  api,
   namespace,
+  form,
   writable,
   reload,
-  timeout,
 }: ProviderEditorProps) {
   const initial = initialEditorState(namespace, row.settingsPath)
   const [open, setOpen] = React.useState(false)
@@ -69,8 +81,7 @@ export function ProviderEditor({
   const [baseline, setBaseline] = React.useState(initial)
   const [failure, setFailure] = React.useState('')
   const [busy, setBusy] = React.useState(false)
-  const [confirmDelete, setConfirmDelete] = React.useState(false)
-  const [deleteCountdown, setDeleteCountdown] = React.useState(0)
+  const [deleteConfirm, setDeleteConfirm] = React.useState(false)
   const [keyDraft, setKeyDraft] = React.useState('')
 
   React.useEffect(() => {
@@ -80,11 +91,6 @@ export function ProviderEditor({
     setBaseline(next)
     setFailure('')
   }, [namespace.revision, row.provider])
-
-  React.useEffect(() => {
-    if (!confirmDelete || deleteCountdown <= 0) return undefined
-    return timeout(() => setDeleteCountdown((value) => value - 1), 1000)
-  }, [confirmDelete, deleteCountdown, timeout])
 
   const readOnly = !writable || busy
   const keyRef =
@@ -111,86 +117,67 @@ export function ProviderEditor({
       child,
     )
 
-  const cleaned = stripModelCompat(draft, draft.api)
-  const ops = buildProfileOps(row.settingsPath, baseline, cleaned, explicit)
-  if (keyValue && !explicit.apiKeyEnv) {
-    ops.push({
-      op: 'set',
-      path: [...row.settingsPath, 'apiKeyEnv'],
-      value: keyRef,
-    })
-  }
+  // One plan, computed once: the ops that will be written, the profile that
+  // will be validated, and the credential step. They all come from `cleaned`,
+  // which is what used to differ between the write and the validation.
+  const plan = planSave({
+    row,
+    draft,
+    baseline,
+    explicit,
+    keyValue,
+    keyRef,
+    chosen: profileFieldChoices(),
+  })
 
   const save = async () => {
-    const profile = Object.fromEntries(
-      PROFILE_FIELDS.filter(
-        (name) =>
-          (name === 'api' && (row.declared || explicit.api || draft.api)) ||
-          explicit[name] ||
-          (name === 'apiKeyEnv' && keyValue),
-      ).map((name) => [
-        name,
-        name === 'apiKeyEnv' && !explicit.apiKeyEnv ? keyRef : cleaned[name],
-      ]),
-    )
-    const errors = validateProfile(profile)
+    const errors = validateProfile(plan.profile)
     if (errors.length) {
       setFailure(errors[0])
       return
     }
     setBusy(true)
     setFailure('')
-    try {
-      if (ops.length)
-        valueOf(
-          await row.api.settings.mutate({
-            ns: SETTINGS_NS,
-            ops,
-            expectedRevision: namespace.revision,
-          }),
-        )
-      if (keyValue)
-        valueOf(
-          await row.api.credentials.set({
-            ref: keyRef,
-            value: keyValue,
-          }),
-        )
-      setKeyDraft('')
-      await reload()
-    } catch (error) {
-      setFailure(responseMessage(error))
-    } finally {
-      setBusy(false)
-    }
+    const outcome = await commit({
+      form,
+      ops: plan.ops,
+      api,
+      ...(plan.credential === undefined ? {} : { credential: plan.credential }),
+      reload,
+    })
+    if (outcome.kind === 'written') setKeyDraft('')
+    const message = outcomeMessage(outcome)
+    if (message !== undefined) setFailure(message)
+    setBusy(false)
   }
 
   const remove = async () => {
-    if (deleteCountdown > 0) return
     setBusy(true)
     setFailure('')
-    try {
-      if (typeof draft.apiKeyEnv === 'string' && draft.apiKeyEnv) {
-        valueOf(await row.api.credentials.unset({ ref: draft.apiKeyEnv }))
-      }
-      valueOf(
-        await row.api.settings.mutate({
-          ns: SETTINGS_NS,
-          ops: [{ op: 'unset', path: [...row.settingsPath] }],
-          expectedRevision: namespace.revision,
-        }),
-      )
-      await reload()
-    } catch (error) {
-      setFailure(responseMessage(error))
-    } finally {
-      setBusy(false)
-    }
+    const outcome = await removeProfile({
+      form,
+      api,
+      path: row.settingsPath,
+      ...(typeof draft.apiKeyEnv === 'string' && draft.apiKeyEnv
+        ? { credentialRef: draft.apiKeyEnv }
+        : {}),
+      reload,
+    })
+    const message = outcomeMessage(outcome)
+    if (message !== undefined) setFailure(message)
+    setBusy(false)
   }
 
   const customFields = e(
     React.Fragment,
     null,
+    row.error
+      ? e(
+          'p',
+          { className: 'dsh-ma-status dsh-ma-error', role: 'alert' },
+          row.error,
+        )
+      : null,
     e(
       'div',
       { className: 'dsh-ma-group' },
@@ -216,11 +203,15 @@ export function ProviderEditor({
           }),
         ),
         e(CredentialField, {
-          api: row.api,
+          api,
           keyRef,
           revision: namespace.revision,
           value: keyDraft,
           disabled: readOnly,
+          nativeAuth: row.nativeAuth,
+          credentialChecks: row.credentialChecks,
+          hasNamedRef:
+            typeof draft.apiKeyEnv === 'string' && draft.apiKeyEnv.length > 0,
           onChange: (value) => setKeyDraft(String(value || '')),
         }),
         e(
@@ -241,7 +232,12 @@ export function ProviderEditor({
           e(TextInput, {
             value: draft.baseURL,
             disabled: !explicit.baseURL || readOnly,
-            placeholderKey: 'placeholder.baseURL',
+            placeholder: inheritedEndpoint(row),
+            placeholderKey:
+              row.defaultBaseURL === undefined &&
+              (row.baseURLEnv === undefined || row.baseURLEnv.length === 0)
+                ? 'placeholder.baseURL'
+                : undefined,
             onChange: (value) => setField('baseURL', value),
           }),
           true,
@@ -461,10 +457,12 @@ export function ProviderEditor({
         'models',
         e(ModelList, {
           value: draft.models,
+          shape: 'array',
+          fields: PI_AI_MODEL_FIELDS,
           disabled: !explicit.models || readOnly,
           api: draft.api,
           probe: {
-            clientApi: row.api,
+            clientApi: api,
             provider: row.provider,
             baseURL: draft.baseURL,
             api: draft.api,
@@ -491,7 +489,9 @@ export function ProviderEditor({
     field(
       'modelOverrides',
       e(ModelList, {
-        override: true,
+        shape: 'record',
+        fields: PI_AI_MODEL_FIELDS,
+        addKey: 'models.action.addOverride',
         value: draft.modelOverrides,
         disabled: !explicit.modelOverrides || explicit.models || readOnly,
         api: draft.api,
@@ -503,7 +503,7 @@ export function ProviderEditor({
 
   return e(
     'section',
-    { className: 'dsh-ma-provider' },
+    { className: 'dsh-ma-provider', 'data-settings-ns': SETTINGS_NS },
     e(
       'div',
       { className: 'dsh-ma-provider-head' },
@@ -525,10 +525,7 @@ export function ProviderEditor({
               type: 'button',
               className: 'dsh-ma-button',
               disabled: readOnly,
-              onClick: () => {
-                setConfirmDelete(true)
-                setDeleteCountdown(3)
-              },
+              onClick: () => setDeleteConfirm(true),
             },
             tr('action.delete'),
           )
@@ -544,7 +541,7 @@ export function ProviderEditor({
         tr(open ? 'action.collapse' : 'action.edit'),
       ),
     ),
-    confirmDelete
+    deleteConfirm
       ? e(
           'div',
           { className: 'dsh-ma-delete-confirm', role: 'alert' },
@@ -565,10 +562,7 @@ export function ProviderEditor({
                 type: 'button',
                 className: 'dsh-ma-button',
                 disabled: busy,
-                onClick: () => {
-                  setConfirmDelete(false)
-                  setDeleteCountdown(0)
-                },
+                onClick: () => setDeleteConfirm(false),
               },
               tr('action.cancel'),
             ),
@@ -577,14 +571,10 @@ export function ProviderEditor({
               {
                 type: 'button',
                 className: 'dsh-ma-button dsh-ma-primary',
-                disabled: readOnly || deleteCountdown > 0,
+                disabled: readOnly,
                 onClick: remove,
               },
-              deleteCountdown > 0
-                ? tr('delete.wait', {
-                    seconds: deleteCountdown,
-                  })
-                : tr('action.confirmDelete'),
+              tr('action.confirmDelete'),
             ),
           ),
         )
@@ -613,7 +603,7 @@ export function ProviderEditor({
               {
                 type: 'button',
                 className: 'dsh-ma-button',
-                disabled: readOnly || !ops.length,
+                disabled: readOnly || !plan.ops.length,
                 onClick: () => {
                   setDraft(clone(baseline.profile))
                   setExplicit({ ...baseline.explicit })
@@ -627,7 +617,7 @@ export function ProviderEditor({
               {
                 type: 'button',
                 className: 'dsh-ma-button dsh-ma-primary',
-                disabled: readOnly || !ops.length,
+                disabled: readOnly || !plan.ops.length,
                 onClick: save,
               },
               tr(busy ? 'action.saving' : 'action.apply'),

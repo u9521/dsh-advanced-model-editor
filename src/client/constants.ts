@@ -99,44 +99,9 @@ export const THINKING_TOKEN_BUDGET_FIELDS: string[] = [
 
 export const CACHE_CONTROL_FORMATS: string[] = ['anthropic']
 
-export const PROTOCOL_COMPAT_FIELDS: Record<string, string[]> = {
-  'openai-completions': [
-    'thinkingFormat',
-    'supportsReasoningEffort',
-    'supportsDeveloperRole',
-    'supportsStore',
-    'supportsUsageInStreaming',
-    'supportsFinishReason',
-    'maxTokensField',
-    'requiresToolResultName',
-    'requiresAssistantAfterToolResult',
-    'requiresThinkingAsText',
-    'requiresReasoningContentOnAssistantMessages',
-    'chatTemplateKwargs',
-    'chatTemplateArgs',
-    'supportsThinkingTokenBudget',
-    'thinkingTokenBudgetField',
-    'vllmPriority',
-    'supportsStrictMode',
-    'cacheControlFormat',
-    'supportsLongCacheRetention',
-  ],
-  'openai-responses': [
-    'supportsDeveloperRole',
-    'supportsMaxOutputTokens',
-    'supportsStrictMode',
-    'supportsLongCacheRetention',
-  ],
-  'anthropic-messages': [
-    'supportsTemperature',
-    'forceAdaptiveThinking',
-    'supportsEagerToolInputStreaming',
-    'supportsCacheControlOnTools',
-    'allowEmptySignature',
-    'supportsStrictTools',
-    'supportsLongCacheRetention',
-  ],
-}
+// The compat field set lives in ./compat.ts, which also carries each field's
+// control kind. Keeping a second allow-list here is what let the editor fall
+// two fields behind the adapter it was supposed to offer.
 
 export const PROTOCOLS: Protocol[] = [
   'openai-completions',

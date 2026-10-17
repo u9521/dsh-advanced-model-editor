@@ -2,22 +2,23 @@ import * as React from 'react'
 import { SETTINGS_NS } from '../constants.ts'
 import { Field, ProtocolSelect, TextInput } from '../controls/index.ts'
 import { ModelList } from '../models/index.ts'
+import { PI_AI_MODEL_FIELDS } from '../models/model-fields.ts'
+import type { ConfigForm } from '../settings.ts'
+import { conflictMessage, writeOps } from '../settings.ts'
 import { stripModelCompat } from '../state.ts'
 import type {
-  ModelApi,
   ModelProfile,
   Protocol,
   ProviderProfile,
   ProviderRow,
-  SettingsNamespaceView,
 } from '../types.ts'
-import { responseMessage, tr, valueOf } from '../utils.ts'
+import { tr } from '../i18n.ts'
+import { responseMessage } from '../utils.ts'
 import { validateProfile } from '../validation.ts'
 
 export interface CreateCustomProviderProps {
-  namespace: SettingsNamespaceView
   rows: ProviderRow[]
-  api: ModelApi
+  form: ConfigForm
   writable: boolean
   reload: () => unknown
   close: () => void
@@ -26,9 +27,8 @@ export interface CreateCustomProviderProps {
 const e = React.createElement
 
 export function CreateCustomProvider({
-  namespace,
   rows,
-  api,
+  form,
   writable,
   reload,
   close,
@@ -62,20 +62,19 @@ export function CreateCustomProvider({
       return
     }
     setBusy(true)
+    setFailure('')
     try {
-      valueOf(
-        await api.settings.mutate({
-          ns: SETTINGS_NS,
-          expectedRevision: namespace.revision,
-          ops: [
-            {
-              op: 'set',
-              path: ['providers', route],
-              value: profile,
-            },
-          ],
-        }),
-      )
+      const accepted = await writeOps(form, [
+        {
+          op: 'set',
+          path: ['providers', route],
+          value: profile,
+        },
+      ])
+      if (!accepted) {
+        setFailure(conflictMessage())
+        return
+      }
       await reload()
       close()
     } catch (error) {
@@ -87,7 +86,7 @@ export function CreateCustomProvider({
   const disabled = !writable || busy
   return e(
     'section',
-    { className: 'dsh-ma-create' },
+    { className: 'dsh-ma-create', 'data-settings-ns': SETTINGS_NS },
     e('h3', { className: 'dsh-ma-group-title' }, tr('custom.title')),
     e(
       'div',
@@ -137,6 +136,8 @@ export function CreateCustomProvider({
       { labelKey: 'field.models', wide: true },
       e(ModelList, {
         value: catalog,
+        shape: 'array',
+        fields: PI_AI_MODEL_FIELDS,
         disabled,
         api: protocol,
         onChange: (value) => setCatalog(Array.isArray(value) ? value : []),

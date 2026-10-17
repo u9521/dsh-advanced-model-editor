@@ -1,6 +1,7 @@
 import * as React from 'react'
-import { PROTOCOLS } from '../constants.ts'
-import { formatCapacity, parseCapacity, tr } from '../utils.ts'
+import { protocolChoices } from '../choices.ts'
+import { tr } from '../i18n.ts'
+import { formatCapacity, parseCapacity } from '../utils.ts'
 
 export interface TextInputProps {
   type?: string
@@ -208,7 +209,7 @@ export function ProtocolSelect(props: ProtocolSelectProps) {
     onChange: props.onChange,
     disabled: props.disabled,
     allowUnset: props.allowUnset ?? false,
-    choices: [...PROTOCOLS],
+    choices: [...protocolChoices()],
     choiceKeyPrefix: 'controls.protocol',
     unsetKey: props.unsetKey || 'controls.select.unset',
     ariaLabelKey: props.ariaLabelKey || 'controls.protocol.label',

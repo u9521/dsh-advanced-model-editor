@@ -1,10 +1,14 @@
 import * as React from 'react'
 import { createModelApi } from './api.ts'
+import { adoptSchemaChoices } from './choices.ts'
 import { LOCALE_NS, OFFICIAL_NS, SETTINGS_NS } from './constants.ts'
+import { MARK_PATH, MARK_STROKE } from './icon.ts'
 import { en, flattenDictionary, zh } from './locales/index.ts'
 import * as page from './page.ts'
+import type { SettingsServices } from './settings.ts'
+import { namespaceView } from './settings.ts'
 import { CSS } from './styles.ts'
-import { setTranslator, tr } from './utils.ts'
+import { setTranslator, tr } from './i18n.ts'
 
 const e = React.createElement
 const NS = LOCALE_NS
@@ -15,8 +19,8 @@ export const inject = [
   'remote',
   'remote.credentials',
   'remote.llm',
-  'remote.settings',
-  'timer',
+  'configForms',
+  'settingsSchema',
 ]
 export function apply(ctx: any) {
   ctx.effect(
@@ -40,18 +44,19 @@ export function apply(ctx: any) {
     document.head.appendChild(style)
     return () => style.remove()
   }, 'model-advanced: styles')
-  // The settings shell renders a nav glyph per section id and falls back to
-  // the gear for ids it does not know (model-advanced is not known), so the
-  // nav icon is swapped for a pen after the panel paints.
-  const PEN_PATH =
-    'M9.94076 1.34942C10.7047 0.90231 11.6503 0.902415 12.4143 1.34942C12.7061 1.52015 12.9688 1.79118 13.3104 2.13284C13.6521 2.47448 13.9231 2.73721 14.0939 3.02894C14.5408 3.79294 14.5409 4.73856 14.0939 5.50251C13.9231 5.79415 13.652 6.05704 13.3104 6.39861L6.65932 13.0497C6.28068 13.4284 6.00695 13.7108 5.66543 13.9097C5.32391 14.1085 4.94315 14.2074 4.42705 14.3498L3.24394 14.6761C2.77527 14.8054 2.34538 14.9262 2.00131 14.9684C1.65196 15.0112 1.17964 15.0013 0.810764 14.6325C0.441921 14.2637 0.432107 13.7913 0.47486 13.442C0.517035 13.0979 0.6379 12.668 0.767181 12.1993L1.09352 11.0162C1.23588 10.5001 1.33481 10.1193 1.5336 9.77784C1.7325 9.43632 2.0149 9.1626 2.39355 8.78395L9.04466 2.13284C9.38625 1.79126 9.64911 1.52016 9.94076 1.34942ZM15.5427 14.8398H7.55223L8.96707 13.425H15.5427V14.8398ZM3.39382 9.78422C2.965 10.213 2.84244 10.3436 2.75709 10.49C2.67183 10.6366 2.61862 10.8079 2.45733 11.3925L2.13099 12.5756C2.00183 13.0439 1.92194 13.3419 1.88863 13.5536C2.10041 13.5204 2.39872 13.4416 2.86764 13.3123L4.05075 12.9859C4.63544 12.8246 4.80669 12.7715 4.95323 12.6862C5.09968 12.6008 5.23022 12.4783 5.65905 12.0494L10.721 6.98644L8.45577 4.72121L3.39382 9.78422ZM11.7 2.57079C11.3774 2.38198 10.9777 2.38198 10.6551 2.57079C10.5602 2.62647 10.4487 2.72931 10.0449 3.13311L9.45604 3.72094L11.7213 5.98617L12.3102 5.39833C12.7139 4.99457 12.8168 4.88307 12.8725 4.78818C13.0613 4.46561 13.0612 4.06585 12.8725 3.74326C12.8169 3.64827 12.7146 3.53752 12.3102 3.13311C11.9057 2.72863 11.795 2.6264 11.7 2.57079Z'
-  const makePenSvg = () => {
+  // The settings shell renders a nav glyph per section id and falls back to the
+  // gear for ids it does not know (model-advanced is not known), so the nav
+  // icon is swapped for this plugin's mark after the panel paints.
+  const makeMarkSvg = () => {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('viewBox', '0 0 16 16')
+    svg.setAttribute('viewBox', '0 0 24 24')
     svg.setAttribute('fill', 'none')
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    path.setAttribute('d', PEN_PATH)
-    path.setAttribute('fill', 'currentColor')
+    path.setAttribute('d', MARK_PATH)
+    path.setAttribute('stroke', 'currentColor')
+    path.setAttribute('stroke-width', String(MARK_STROKE))
+    path.setAttribute('stroke-linecap', 'round')
+    path.setAttribute('stroke-linejoin', 'round')
     svg.appendChild(path)
     return svg
   }
@@ -61,14 +66,14 @@ export function apply(ctx: any) {
       const span = button.querySelector('span')
       if (!span || span.textContent !== label) continue
       const icon = button.querySelector('svg')
-      if (!icon || icon.dataset.dshMaIcon === 'pen') continue
-      const pen = makePenSvg()
+      if (!icon || icon.dataset.dshMaIcon === 'mark') continue
+      const mark = makeMarkSvg()
       for (const name of ['width', 'height', 'class']) {
         const value = icon.getAttribute(name)
-        if (value !== null) pen.setAttribute(name, value)
+        if (value !== null) mark.setAttribute(name, value)
       }
-      pen.dataset.dshMaIcon = 'pen'
-      icon.replaceWith(pen)
+      mark.dataset.dshMaIcon = 'mark'
+      icon.replaceWith(mark)
     }
   }
   ctx.effect(() => {
@@ -84,36 +89,66 @@ export function apply(ctx: any) {
     observer.observe(document.body, { childList: true, subtree: true })
     return () => observer.disconnect()
   }, 'model-advanced: nav icon')
-  const subscribe = (refresh: () => void) => {
+  const api = createModelApi(ctx)
+  const services: SettingsServices = {
+    configForms: ctx.configForms,
+    settingsSchema: ctx.settingsSchema,
+  }
+  const describe = ctx.configForms.describe()
+  const adopt = () => {
+    adoptSchemaChoices(ctx.settingsSchema, {
+      llmPiAi: namespaceView(describe, SETTINGS_NS),
+      llmDeepSeek: namespaceView(describe, OFFICIAL_NS),
+    })
+  }
+  adopt()
+  ctx.effect(() => describe.subscribe(adopt), 'model-advanced: schema choices')
+  // The mirror refreshes itself on `settings/document-updated`; the page
+  // re-reads the directory and credentials whenever a describe answer lands.
+  // These three pushes change facts the mirror does not own, so they ask for a
+  // fresh answer instead of re-reading only the settings document.
+  ctx.effect(() => {
     const disposers = [
-      ctx.remote.$on('settings/document-updated', (namespace: unknown) => {
-        if (namespace === SETTINGS_NS || namespace === OFFICIAL_NS) refresh()
-      }),
-      ctx.remote.$on('credentials/reference-updated', refresh),
-      ctx.remote.$on('llm/adapters-updated', refresh),
-      ctx.on('connection/reset', refresh),
+      ctx.remote.$on(
+        'credentials/reference-updated',
+        () => void describe.ensure(),
+      ),
+      ctx.remote.$on(
+        'credentials/record-updated',
+        () => void describe.ensure(),
+      ),
+      ctx.remote.$on('llm/adapters-updated', () => void describe.ensure()),
+      ctx.on('connection/reset', () => void describe.ensure()),
     ]
     return () => {
       for (const dispose of disposers) dispose()
     }
-  }
-  ctx.slots.inject('settings.section', () =>
-    ctx.slots.register(
-      {
-        name: 'settings.section',
-        id: 'model-advanced',
-        order: 11,
-        label: () => tr('nav'),
-      },
-      function Page() {
-        return e(page.LocalePage, {
-          locale: ctx.locale,
-          api: createModelApi(ctx),
-          retryLater: ctx.timer.timeout.bind(ctx.timer),
-          timeout: ctx.timer.timeout.bind(ctx.timer),
-          subscribe,
-        })
-      },
-    ),
+  }, 'model-advanced: invalidations')
+  // The section exists only while one of its namespaces is served: a
+  // deployment without either LLM adapter plugin shows no empty page, and the
+  // registration appears as soon as the adapter is composed.
+  ctx.effect(
+    () =>
+      ctx.configForms.whileServed([SETTINGS_NS, OFFICIAL_NS], () =>
+        ctx.slots.inject('settings.section', () =>
+          ctx.slots.register(
+            {
+              name: 'settings.section',
+              id: 'model-advanced',
+              order: 11,
+              label: () => tr('nav'),
+            },
+            function Page() {
+              return e(page.LocalePage, {
+                locale: ctx.locale,
+                api,
+                describe,
+                configForms: services.configForms,
+              })
+            },
+          ),
+        ),
+      ),
+    'model-advanced: settings section',
   )
 }

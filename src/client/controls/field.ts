@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { tr } from '../utils.ts'
+import { tr } from '../i18n.ts'
 
 export interface FieldProps {
   labelKey: string

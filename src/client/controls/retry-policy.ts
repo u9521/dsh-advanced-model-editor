@@ -13,13 +13,6 @@ export interface RetryPolicyProps {
 
 const e = React.createElement
 
-/** Default bounded policy written when a route first enables retries. */
-const DEFAULT_BACKOFF: BackoffConfig = {
-  initialDelayMs: 500,
-  maxDelayMs: 10000,
-  jitterRatio: 0.1,
-}
-
 /** Loose draft carrying whichever bounded-only fields the caller wants to write. */
 interface RetryDraft {
   mode: RetryMode

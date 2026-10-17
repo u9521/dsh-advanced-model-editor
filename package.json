@@ -9,14 +9,17 @@
   "types": "./lib/types/index.d.ts",
   "files": [
     "lib",
+    "locale",
+    "icon.svg",
     "cordis.patch.yml",
     "README.md",
     "README.zh.md",
     "LICENSE"
   ],
+  "icon": "./icon.svg",
   "engines": {
     "node": "^22.19 || >=24",
-    "dsh": ">=0.2.0-rc.1"
+    "dsh": ">=0.2.1-rc.1"
   },
   "peerDependencies": {
     "@deepseek-ai/dsh-client-ui-primitives": "^0.2.0-rc.1",
@@ -58,14 +61,15 @@
   ],
   "devDependencies": {
     "@deepseek-ai/cordis": "^4.0.4",
-    "@deepseek-ai/dsh-api-remotes": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-locale": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-api-remotes": "0.2.1-rc.1",
+    "@deepseek-ai/dsh-client-locale": "0.2.1-rc.1",
     "@deepseek-ai/dsh-client-ui-primitives": "0.2.0-rc.1",
-    "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.1",
+    "@deepseek-ai/dsh-client-ui-settings": "0.2.1-rc.1",
     "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.1",
     "@types/node": "^22.0.0",
     "@types/react": "^18.3.1",
     "prettier": "^3.9.6",
+    "react": "^18.3.1",
     "tsdown": "^0.22.14",
     "typescript": "^6.0.3"
   },
@@ -76,6 +80,9 @@
     },
     "./client": "./lib/client.js",
     "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./icon.svg": "./icon.svg",
     "./package.json": "./package.json"
   }
 }

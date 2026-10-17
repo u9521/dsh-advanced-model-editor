@@ -30,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 26
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -58,6 +58,12 @@ jobs:
           cp lib/index.js lib/client.js .dist/lib/
           cp cordis.patch.yml LICENSE .dist/
 
+          # Plugin display metadata: DSH reads locale/*.json for the localized
+          # name and description, and the manifest's icon field for the glyph.
+          # Without these the dist package installs with a bare technical name.
+          cp -r locale .dist/locale
+          cp icon.svg .dist/icon.svg
+
           # Generate minimal dist README and sanitized production package.json
           node -e '
             const fs = require("node:fs");
@@ -67,7 +73,7 @@ jobs:
             const readme = [
               "# dsh-advanced-model-editor",
               "",
-              "Pre-built distribution package for **dsh-advanced-model-editor** (Advanced Model Settings plugin for DeepSeek Harness WebUI).",
+              "Pre-built distribution package for **dsh-advanced-model-editor** (Advanced Model Configuration plugin for DeepSeek Harness WebUI).",
               "",
               "For full documentation, screenshots, and source code, visit the GitHub repository:",
               "",
@@ -95,7 +101,8 @@ jobs:
               description: pkg.description,
               license: pkg.license,
               main: "./lib/index.js",
-              files: ["lib", "cordis.patch.yml", "README.md", "LICENSE"],
+              files: ["lib", "locale", "icon.svg", "cordis.patch.yml", "README.md", "LICENSE"],
+              ...(pkg.icon === void 0 ? {} : { icon: pkg.icon }),
               engines: pkg.engines,
               peerDependencies: pkg.peerDependencies,
               peerDependenciesMeta: pkg.peerDependenciesMeta,
@@ -105,6 +112,9 @@ jobs:
                 ".": "./lib/index.js",
                 "./client": "./lib/client.js",
                 "./cordis.patch.yml": "./cordis.patch.yml",
+                "./locale/*.json": "./locale/*.json",
+                "./icon": "./icon.svg",
+                "./icon.svg": "./icon.svg",
                 "./package.json": "./package.json",
               },
             };

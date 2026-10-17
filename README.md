@@ -1,17 +1,25 @@
 # dsh-advanced-model-editor
 
-A DeepSeek Harness WebUI plugin that adds an **Advanced Model Settings** section to the
+A DeepSeek Harness WebUI plugin that adds an **Advanced Model Configuration** section to the
 Settings page. It manages LLM provider profiles across the settings namespaces — the
 custom provider namespace (`llm-pi-ai`) and the official provider namespace
 (`llm-deepseek`) — including built-in and custom providers, model lists,
 reasoning/thinking options, headers, retry policy and more, with the same validation
 and conflict rules as the official settings UI.
 
+Reads and writes ride DSH's shared settings services (`ctx.configForms` /
+`ctx.settingsSchema`), so this page and the official Models page share one document
+mirror and one revision queue instead of racing each other. The section appears only
+while one of its namespaces is actually served, and it shows the provider facts DSH
+0.2.1 reports — the endpoint a profile inherits (`defaultBaseURL` / `baseURLEnv`), the
+route's own authentication (`nativeAuth`, including OAuth) and any catalog diagnostic —
+so a keyless route no longer reads as a missing credential.
+
 ![Screenshot](docs/pics/screenshot.png)
 
 ## Requirements
 
-- **DSH** `>= 0.2.0-rc.1` — only the current release is supported. There is no
+- **DSH** `>= 0.2.1-rc.1` — only the current release is supported. There is no
   backward-compatibility layer for older DSH versions.
 - **Node.js** `^22.19 || >=24`.
 
@@ -25,7 +33,7 @@ Install directly from the GitHub `dist` branch (pre-built by CI, no manual clone
 dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
 ```
 
-Then **restart web** (`dsh web`) and **hard-refresh** your browser (Cmd+Shift+R). The plugin appears as **Advanced Model Settings** in Settings.
+Then **restart web** (`dsh web`) and **hard-refresh** your browser (Cmd+Shift+R). The plugin appears as **Advanced Model Configuration** in Settings.
 
 ### Upgrade (Remote Install)
 

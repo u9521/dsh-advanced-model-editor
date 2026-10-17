@@ -1,6 +1,8 @@
 import * as React from 'react'
 import type { ReasoningEfforts } from '../types.ts'
-import { createDefaultReasoningEfforts, isObject, tr } from '../utils.ts'
+import { createDefaultReasoningEfforts } from '../choices.ts'
+import { tr } from '../i18n.ts'
+import { isObject } from '../utils.ts'
 import { Select } from './inputs.ts'
 import { KeyValueList } from './key-value-list.ts'
 

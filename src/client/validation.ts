@@ -1,16 +1,13 @@
+import { compatFields } from './compat.ts'
 import {
   BUDGET_LEVELS,
-  CACHE_CONTROL_FORMATS,
   CACHE_RETENTIONS,
   MAX_TIMER_DELAY_MS,
-  MAX_TOKENS_FIELDS,
   MODALITIES,
   OFFICIAL_REASONING,
   OFFICIAL_THINKING,
   PROTOCOLS,
-  THINKING_FORMATS,
   THINKING_LEVELS,
-  THINKING_TOKEN_BUDGET_FIELDS,
   TOOL_UPDATES,
   TRANSPORTS,
 } from './constants.ts'
@@ -22,7 +19,8 @@ import type {
   ToolUpdate,
   Transport,
 } from './types.ts'
-import { isObject, owns, tr } from './utils.ts'
+import { tr } from './i18n.ts'
+import { isObject, owns } from './utils.ts'
 
 function numberError(
   value: unknown,
@@ -42,78 +40,55 @@ function numberError(
     errors.push(tr('validation.number', { field: tr(key) }))
 }
 
+/**
+ * Validate one route's `compat` dict against the protocol it will run on.
+ *
+ * The field set and each field's kind come from `./compat.ts`, the same table
+ * the editor renders and the save path filters with, so a field cannot be
+ * offered, written and then rejected (or accepted for a protocol that ignores
+ * it, which is what a protocol-blind validator let through).
+ * @param value - the drafted compat dict.
+ * @param path - field label used in the messages.
+ * @param errors - collected failures.
+ * @param api - the route's wire protocol; unset takes the adapter's default.
+ */
 export function validateCompat(
   value: unknown,
   path: string,
   errors: string[],
+  api?: string,
 ): void {
   if (!isObject(value)) {
     errors.push(tr('validation.object', { field: path }))
     return
   }
-  if (
-    owns(value, 'thinkingFormat') &&
-    !THINKING_FORMATS.includes(String(value.thinkingFormat))
-  )
-    errors.push(tr('validation.invalid', { field: `${path}.thinkingFormat` }))
-  if (
-    owns(value, 'maxTokensField') &&
-    !MAX_TOKENS_FIELDS.includes(String(value.maxTokensField))
-  )
-    errors.push(tr('validation.invalid', { field: `${path}.maxTokensField` }))
-  if (
-    owns(value, 'thinkingTokenBudgetField') &&
-    !THINKING_TOKEN_BUDGET_FIELDS.includes(
-      String(value.thinkingTokenBudgetField),
-    )
-  )
-    errors.push(
-      tr('validation.invalid', { field: `${path}.thinkingTokenBudgetField` }),
-    )
-  if (owns(value, 'vllmPriority')) {
-    numberError(
-      value.vllmPriority,
-      `${path}.vllmPriority`,
-      errors,
-      -Number.MAX_SAFE_INTEGER,
-      Number.MAX_SAFE_INTEGER,
-      true,
-    )
+  for (const field of compatFields(api)) {
+    if (!owns(value, field.key)) continue
+    const entry = value[field.key]
+    const label = `${path}.${field.key}`
+    if (field.kind === 'boolean') {
+      if (typeof entry !== 'boolean')
+        errors.push(tr('validation.invalid', { field: label }))
+    } else if (field.kind === 'enum') {
+      if (!(field.choices ?? []).includes(String(entry)))
+        errors.push(tr('validation.invalid', { field: label }))
+    } else if (field.kind === 'integer') {
+      numberError(
+        entry,
+        label,
+        errors,
+        -Number.MAX_SAFE_INTEGER,
+        Number.MAX_SAFE_INTEGER,
+        true,
+      )
+    } else if (!isObject(entry)) {
+      errors.push(tr('validation.object', { field: label }))
+    }
   }
-  if (
-    owns(value, 'cacheControlFormat') &&
-    !CACHE_CONTROL_FORMATS.includes(String(value.cacheControlFormat))
-  )
-    errors.push(
-      tr('validation.invalid', { field: `${path}.cacheControlFormat` }),
-    )
-  for (const field of [
-    'supportsReasoningEffort',
-    'supportsDeveloperRole',
-    'supportsStore',
-    'supportsUsageInStreaming',
-    'supportsFinishReason',
-    'requiresToolResultName',
-    'requiresAssistantAfterToolResult',
-    'requiresThinkingAsText',
-    'requiresReasoningContentOnAssistantMessages',
-    'supportsThinkingTokenBudget',
-    'supportsStrictMode',
-    'supportsMaxOutputTokens',
-    'supportsLongCacheRetention',
-    'supportsEagerToolInputStreaming',
-    'supportsCacheControlOnTools',
-    'supportsTemperature',
-    'forceAdaptiveThinking',
-    'allowEmptySignature',
-    'supportsStrictTools',
-  ])
-    if (owns(value, field) && typeof value[field] !== 'boolean')
-      errors.push(tr('validation.invalid', { field: `${path}.${field}` }))
-  for (const dictField of ['chatTemplateKwargs', 'chatTemplateArgs']) {
-    if (owns(value, dictField) && !isObject(value[dictField]))
-      errors.push(tr('validation.object', { field: `${path}.${dictField}` }))
-  }
+  // A key the route's protocol does not offer is dropped by the save path's
+  // filter (`filterCompatForProtocol`), which owns that rule. Rejecting it here
+  // as well would validate an object the write never sees — the divergence this
+  // module was split out to remove.
 }
 
 export function validateReasoningEfforts(
@@ -141,6 +116,7 @@ export function validateModel(
   model: unknown,
   path: string,
   requireId: boolean = true,
+  api?: string,
 ): string[] {
   const errors: string[] = []
   if (!isObject(model)) return [tr('validation.object', { field: path })]
@@ -172,7 +148,7 @@ export function validateModel(
       errors,
     )
   if (owns(model, 'compat'))
-    validateCompat(model.compat, `${path}.compat`, errors)
+    validateCompat(model.compat, `${path}.compat`, errors, api)
   return errors
 }
 
@@ -222,10 +198,22 @@ export function validateRetryPolicy(value: unknown): string[] {
   return errors
 }
 
+/**
+ * Validate one pi-ai provider profile before a write.
+ *
+ * `apiKeyEnv` stays optional by design: DSH 0.2.1 reports the authentication a
+ * route performs without a credential reference (`nativeAuth`), so a keyless
+ * route is a complete configuration, not an unfinished one. Only a reference
+ * that IS present must be a legal environment-variable name.
+ * @param profile - the profile about to be written.
+ * @returns the localized failures; empty when the profile may be saved.
+ */
 export function validateProfile(profile: unknown): string[] {
   const errors: string[] = []
   if (!isObject(profile))
     return [tr('validation.object', { field: tr('provider.label') })]
+  /** The drafted protocol: `compat` is judged against the route that will run it. */
+  const api = typeof profile.api === 'string' ? profile.api : undefined
   if (
     owns(profile, 'apiKeyEnv') &&
     !/^[A-Za-z_][A-Za-z0-9_]*$/.test(String(profile.apiKeyEnv))
@@ -331,7 +319,7 @@ export function validateProfile(profile: unknown): string[] {
         true,
       )
   if (owns(profile, 'compat'))
-    validateCompat(profile.compat, tr('field.compat'), errors)
+    validateCompat(profile.compat, tr('field.compat'), errors, api)
   if (owns(profile, 'retryPolicy'))
     errors.push(...validateRetryPolicy(profile.retryPolicy))
   if (owns(profile, 'models')) {
@@ -340,7 +328,12 @@ export function validateProfile(profile: unknown): string[] {
       const ids = new Set<string>()
       profile.models.forEach((entry, index) => {
         errors.push(
-          ...validateModel(entry, tr('modelIndex', { index: index + 1 })),
+          ...validateModel(
+            entry,
+            tr('modelIndex', { index: index + 1 }),
+            true,
+            api,
+          ),
         )
         if (isObject(entry) && typeof entry.id === 'string') {
           if (ids.has(entry.id))
@@ -355,7 +348,9 @@ export function validateProfile(profile: unknown): string[] {
       errors.push(tr('validation.overrides'))
     else
       for (const [id, entry] of Object.entries(profile.modelOverrides))
-        errors.push(...validateModel(entry, tr('overrideId', { id }), false))
+        errors.push(
+          ...validateModel(entry, tr('overrideId', { id }), false, api),
+        )
   }
   if (owns(profile, 'models') && owns(profile, 'modelOverrides'))
     errors.push(tr('validation.catalogConflict'))

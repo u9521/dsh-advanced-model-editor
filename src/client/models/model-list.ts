@@ -1,44 +1,132 @@
 import * as React from 'react'
 import * as primitives from '@deepseek-ai/dsh-client-ui-primitives'
+import { tr } from '../i18n.ts'
 import { discoveredModelProfile } from '../state.ts'
 import type { ModelProfile } from '../types.ts'
-import { clone, isObject, tr } from '../utils.ts'
+import { clone, isObject } from '../utils.ts'
 import { DiscoveryProbe, ModelDiscoveryDialog } from './discovery-dialog.ts'
-import { ModelForm } from './model-form.ts'
+import type { ModelField } from './model-fields.ts'
+import { ModelFields } from './model-fields.ts'
+
+/**
+ * How one list addresses its entries.
+ *
+ * A pi-ai route stores its models as an array in list order; a route that
+ * overrides an installed catalog stores them as a record keyed by model id.
+ * That is the one real difference between the two lists, so it is a parameter
+ * rather than a second module.
+ */
+export type ModelListShape = 'array' | 'record'
 
 export interface ModelListProps {
+  /** The stored value: an array or a record, per {@link shape}. */
   value?: ModelProfile[] | Record<string, ModelProfile>
   onChange: (value: ModelProfile[] | Record<string, ModelProfile>) => void
+  /** Which storage shape this list edits. */
+  shape: ModelListShape
+  /** The per-namespace field set to render per entry. */
+  fields: readonly ModelField[]
   disabled?: boolean
-  override?: boolean
-  probe?: DiscoveryProbe
-  /** Wire protocol of the owning route; model compatibility only applies to supported protocols. */
+  /** Wire protocol of the owning route; model compatibility follows it. */
   api?: string
+  /** Endpoint facts used by the discovery dialog, when this list offers one. */
+  probe?: DiscoveryProbe
+  /** Locale key for the add button; a record list adds an override. */
+  addKey?: string
 }
 
 const e = React.createElement
 
+/**
+ * Allocate an id that no sibling entry already uses.
+ * @param base - the id to derive from; an empty base falls back to `model`.
+ * @param taken - ids already in use.
+ * @returns `<base>-copy`, then `<base>-copy-2`, and so on.
+ */
+export function uniqueCopyId(base: string, taken: Set<string>): string {
+  const stem = base.length > 0 ? base : 'model'
+  let candidate = `${stem}-copy`
+  let counter = 2
+  while (taken.has(candidate)) {
+    candidate = `${stem}-copy-${counter}`
+    counter += 1
+  }
+  return candidate
+}
+
+/**
+ * One model list, for both storage shapes.
+ *
+ * Before this module the array list and the record list were separate files
+ * with byte-identical clone, remove, add and set-field code. The mechanics are
+ * shared here; the per-namespace field sets arrive as {@link ModelField}
+ * descriptors, which is where the two genuinely differ.
+ */
 export function ModelList({
   value,
   onChange,
+  shape,
+  fields,
   disabled,
-  override,
-  probe,
   api,
+  probe,
+  addKey,
 }: ModelListProps) {
   const [discovering, setDiscovering] = React.useState(false)
   const list = Array.isArray(value) ? value : []
-  const entries: Array<[string, ModelProfile]> = override
-    ? (Object.entries(isObject(value) ? value : {}) as Array<
-        [string, ModelProfile]
-      >)
-    : list.map((item, index) => [String(index), item] as [string, ModelProfile])
-  const update = (key: string, model: ModelProfile) =>
-    override
-      ? onChange({ ...(value || {}), [key]: model })
-      : onChange(
-          list.map((item, index) => (String(index) === key ? model : item)),
+  const record = isObject(value) ? (value as Record<string, ModelProfile>) : {}
+  const entries: Array<[string, ModelProfile]> =
+    shape === 'record'
+      ? Object.entries(record)
+      : list.map(
+          (item, index) => [String(index), item] as [string, ModelProfile],
         )
+  const taken = new Set(
+    entries.map(([, model]) => model.id).filter((id): id is string => !!id),
+  )
+
+  const replaceAt = (key: string, model: ModelProfile) => {
+    if (shape === 'record') {
+      onChange({ ...record, [key]: model })
+      return
+    }
+    onChange(list.map((item, index) => (String(index) === key ? model : item)))
+  }
+
+  const insertAfter = (key: string, model: ModelProfile) => {
+    if (shape === 'record') {
+      // A record keeps insertion order, so rebuild it with the copy right after
+      // its source instead of appending.
+      const next: Record<string, ModelProfile> = {}
+      for (const [id, entry] of Object.entries(record)) {
+        next[id] = entry
+        if (id === key) next[uniqueCopyId(id, taken)] = model
+      }
+      onChange(next)
+      return
+    }
+    const index = Number(key)
+    onChange([...list.slice(0, index + 1), model, ...list.slice(index + 1)])
+  }
+
+  const removeAt = (key: string) => {
+    if (shape === 'record') {
+      const next = { ...record }
+      delete next[key]
+      onChange(next)
+      return
+    }
+    onChange(list.filter((_, index) => String(index) !== key))
+  }
+
+  const add = () => {
+    if (shape === 'record') {
+      onChange({ ...record, [uniqueCopyId('model', taken)]: {} })
+      return
+    }
+    onChange([...list, { id: '' }])
+  }
+
   return e(
     'div',
     { className: 'dsh-ma-wide' },
@@ -49,28 +137,25 @@ export function ModelList({
         e(
           'div',
           { className: 'dsh-ma-model-head' },
-          override
+          shape === 'record'
             ? e('input', {
                 className: 'dsh-ma-input',
                 style: { maxWidth: '320px' },
                 value: key,
                 disabled,
                 placeholder: tr('models.override.idPlaceholder'),
+                'aria-label': tr('models.override.idPlaceholder'),
                 onChange: (event: React.ChangeEvent<HTMLInputElement>) => {
                   const next: Record<string, ModelProfile> = {}
-                  for (const [id, item] of Object.entries(value || {}))
-                    next[id === key ? event.target.value : id] =
-                      item as ModelProfile
+                  for (const [id, entry] of Object.entries(record))
+                    next[id === key ? event.target.value : id] = entry
                   onChange(next)
                 },
               })
             : e(
                 'span',
                 { className: 'dsh-ma-model-title' },
-                model.id ||
-                  tr('models.item.fallback', {
-                    index: index + 1,
-                  }),
+                model.id || tr('models.item.fallback', { index: index + 1 }),
               ),
           e(
             'div',
@@ -84,50 +169,9 @@ export function ModelList({
                 title: tr('models.action.clone'),
                 'aria-label': tr('models.action.clone'),
                 onClick: () => {
-                  if (override) {
-                    const next: Record<string, ModelProfile> = {}
-                    for (const [id, item] of Object.entries(value || {})) {
-                      next[id] = item as ModelProfile
-                      if (id === key) {
-                        let copyId = `${key}-copy`
-                        let counter = 2
-                        while (
-                          Object.prototype.hasOwnProperty.call(
-                            value || {},
-                            copyId,
-                          ) ||
-                          Object.prototype.hasOwnProperty.call(next, copyId)
-                        ) {
-                          copyId = `${key}-copy-${counter}`
-                          counter += 1
-                        }
-                        next[copyId] = clone(item as ModelProfile)
-                      }
-                    }
-                    onChange(next)
-                  } else {
-                    const cloned = clone(model)
-                    if (cloned.id) {
-                      const existingIds = new Set(
-                        list
-                          .map((m) => m.id)
-                          .filter((id): id is string => Boolean(id)),
-                      )
-                      let copyId = `${cloned.id}-copy`
-                      let counter = 2
-                      while (existingIds.has(copyId)) {
-                        copyId = `${cloned.id}-copy-${counter}`
-                        counter += 1
-                      }
-                      cloned.id = copyId
-                    }
-                    const nextList = [
-                      ...list.slice(0, index + 1),
-                      cloned,
-                      ...list.slice(index + 1),
-                    ]
-                    onChange(nextList)
-                  }
+                  const copied = clone(model)
+                  if (copied.id) copied.id = uniqueCopyId(copied.id, taken)
+                  insertAfter(key, copied)
                 },
               },
               e(primitives.IconCopyOutlineRegular, { size: 16 }),
@@ -140,27 +184,18 @@ export function ModelList({
                 disabled,
                 title: tr('models.action.remove'),
                 'aria-label': tr('models.action.remove'),
-                onClick: () => {
-                  if (override) {
-                    const next = {
-                      ...(value || {}),
-                    } as Record<string, ModelProfile>
-                    delete next[key]
-                    onChange(next)
-                  } else
-                    onChange(list.filter((_, itemIndex) => itemIndex !== index))
-                },
+                onClick: () => removeAt(key),
               },
               e(primitives.IconCloseOutlineRegular, { size: 16 }),
             ),
           ),
         ),
-        e(ModelForm, {
+        e(ModelFields, {
           model,
-          includeId: !override,
-          disabled,
+          fields,
           api,
-          onChange: (next) => update(key, next),
+          disabled,
+          onChange: (next) => replaceAt(key, next),
         }),
       ),
     ),
@@ -173,21 +208,12 @@ export function ModelList({
           type: 'button',
           className: 'dsh-ma-button',
           disabled,
-          onClick: () => {
-            if (!override) return onChange([...list, { id: '' }])
-            let index = 1
-            let id = `model-${index}`
-            while (Object.prototype.hasOwnProperty.call(value || {}, id)) {
-              index += 1
-              id = `model-${index}`
-            }
-            onChange({ ...(value || {}), [id]: {} })
-          },
+          onClick: add,
         },
         e(primitives.IconPlusOutlineRegular, { size: 14 }),
-        tr(override ? 'models.action.addOverride' : 'models.action.add'),
+        tr(addKey ?? 'models.action.add'),
       ),
-      !override && probe
+      shape === 'array' && probe
         ? e(
             'button',
             {
@@ -203,18 +229,10 @@ export function ModelList({
     discovering && probe
       ? e(ModelDiscoveryDialog, {
           probe,
-          existing: new Set(
-            list
-              .map((model) => model.id)
-              .filter((id): id is string => Boolean(id)),
-          ),
+          existing: taken,
           onClose: () => setDiscovering(false),
           onApply: (models) => {
-            const known = new Set(
-              list
-                .map((model) => model.id)
-                .filter((id): id is string => Boolean(id)),
-            )
+            const known = new Set(taken)
             const additions: ModelProfile[] = []
             for (const model of models) {
               if (!model.id || known.has(model.id)) continue
