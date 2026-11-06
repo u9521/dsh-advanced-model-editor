@@ -134,6 +134,10 @@ export interface ProviderProfile {
   websocketConnectTimeoutMs?: number
   streamIdleTimeoutMs?: number
   maxRequestImageBytes?: number
+  /** Maximum retained image occurrences per request; a longer one must offload first. */
+  maxRequestImages?: number
+  /** Oldest occurrences offloaded per count overflow; at most {@link maxRequestImages}. */
+  imageOffloadCountQuantum?: number
   requestImagePixelBudget?: number
   requestImageMaxBytes?: number
   retryPolicy?: RetryPolicyConfig
@@ -149,6 +153,10 @@ export interface OfficialProfile {
   defaultContextWindow?: number
   models?: ModelProfile[]
   streamIdleTimeoutMs?: number
+  /** Deadline of one model-listing request; also bounds a first-use wait. */
+  modelsTimeoutMs?: number
+  /** Listing refresh interval after first use; zero refreshes on every access and disables automatic refresh. */
+  modelsMaxAgeMs?: number
   maxRequestFilesBytes?: number
   maxInlineRequestImageBytes?: number
   maxImagesPerRequest?: number
@@ -181,7 +189,7 @@ export interface SettingsNamespaceView {
 
 /**
  * Authentication a provider route performs without a credential reference in
- * its profile (`LlmNativeAuth` on the DSH 0.2.1 wire). `env` lists the
+ * its profile (`LlmNativeAuth` on the wire). `env` lists the
  * environment variables the route's own authentication reads, in lookup
  * order; `oauth` reports whether a stored OAuth sign-in can authenticate it.
  */
@@ -235,7 +243,7 @@ export interface RpcEnvelope {
 /**
  * The LLM and credential Web API surface used by the advanced model pages.
  * Adapted from `ctx.remote` by `createModelApi`. Settings reads and writes
- * are deliberately absent: DSH 0.2.1 routes them through the shared
+ * are deliberately absent: the shared services route them through the
  * `ctx.configForms` mirror and write queue (see ./settings.ts).
  */
 export interface ModelApi {

@@ -8,7 +8,7 @@ import {
   ProviderEditor,
 } from './providers/index.ts'
 import type { SettingsDescribeFace, SettingsServices } from './settings.ts'
-import { ensureDescribe, namespaceView } from './settings.ts'
+import { ensureDescribe, namespaceView, schemaDefault } from './settings.ts'
 import { hasUserProfile } from './state.ts'
 import type {
   CredentialInfo,
@@ -30,6 +30,7 @@ export interface AdvancedModelsPageProps {
   api: ModelApi
   describe: SettingsDescribeFace
   configForms: SettingsServices['configForms']
+  settingsSchema: SettingsServices['settingsSchema']
 }
 
 export interface LocaleService {
@@ -98,7 +99,7 @@ async function nativeCredentialChecks(
 
 /**
  * Turn one directory row into the row the editor renders, keeping every DSH
- * 0.2.1 fact (inherited endpoint, endpoint environment, native authentication,
+ * directory fact (inherited endpoint, endpoint environment, native authentication,
  * catalog diagnostic) instead of dropping the ones the old wire lacked.
  *
  * The row is data only: the write faces travel beside it as props, so a row can
@@ -136,6 +137,7 @@ export function AdvancedModelsPage({
   api,
   describe,
   configForms,
+  settingsSchema,
 }: AdvancedModelsPageProps) {
   const [state, setState] = React.useState<PageState>({
     status: 'loading',
@@ -303,6 +305,14 @@ export function AdvancedModelsPage({
       state.officialNamespace
         ? e(OfficialProviderEditor, {
             namespace: state.officialNamespace!,
+            // The built-in catalog is the schema default, which is also the
+            // condition the adapter reads: while `models` equals it, the route
+            // follows the service's model listing.
+            builtInCatalog: schemaDefault(
+              settingsSchema,
+              state.officialNamespace,
+              ['models'],
+            ),
             api,
             form: configForms.get(OFFICIAL_NS),
             writable: state.writable,

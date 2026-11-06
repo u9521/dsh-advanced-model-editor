@@ -7,9 +7,10 @@ export type CredentialChecks = Readonly<Record<string, CredentialInfo>>
 /**
  * Describe the credential posture of one route.
  *
- * DSH 0.2.1 exposes the authentication a route performs without any profile
- * credential (`nativeAuth`), so a keyless route must not read as "missing a
- * key": its environment references and OAuth availability are the real answer.
+ * The configurable-provider directory exposes the authentication a route
+ * performs without any profile credential (`nativeAuth`), so a keyless route
+ * must not read as "missing a key": its environment references and OAuth
+ * availability are the real answer.
  * This lives outside the control that renders it because the policy is the part
  * with branches worth testing, and a control file cannot be imported without a
  * React runtime.

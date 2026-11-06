@@ -3,7 +3,7 @@ import type { ModelApi, RpcEnvelope } from './types.ts'
 /**
  * Creates a ModelApi adapter over DSH Typert Remote services.
  *
- * DSH 0.2.1 owns the settings document through `ctx.configForms` /
+ * DSH owns the settings document through `ctx.configForms` /
  * `ctx.settingsSchema`, so this adapter no longer exposes
  * `settings.describe` / `settings.mutate`: reads and writes ride the shared
  * mirror and its ordered write queue (see ./settings.ts). What remains here is
@@ -59,7 +59,7 @@ export function createModelApi(ctx: any): ModelApi {
             : [],
           active: active.has(entry.provider),
           ...(entry.declared !== undefined ? { declared: entry.declared } : {}),
-          // DSH 0.2.1 directory facts: the endpoint a profile inherits, the
+          // Directory facts: the endpoint a profile inherits, the
           // variables that build it, and the route's own authentication. A
           // keyless route must not read as "missing credential".
           ...(entry.defaultBaseURL !== undefined

@@ -155,14 +155,14 @@ test('llm.discoverModels extracts settingsNs and forwards discovery request', as
 })
 
 test('the adapter exposes no settings transport of its own', () => {
-  // DSH 0.2.1 made ctx.configForms the only describe reader and the only
+  // The shared services make ctx.configForms the only describe reader and the only
   // revision queue, so a page-level settings transport would bypass both.
   const api = createModelApi(createMockCtx())
   assert.equal(api.settings, undefined)
   assert.deepEqual(Object.keys(api).sort(), ['credentials', 'llm'])
 })
 
-test('llm.providers forwards the DSH 0.2.1 directory facts', async () => {
+test('llm.providers forwards the provider directory facts', async () => {
   const ctx = createMockCtx({
     remote: {
       llm: {

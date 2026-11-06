@@ -1,5 +1,9 @@
 import * as React from 'react'
-import { DEFAULT_RETRYABLE_CODES, MAX_TIMER_DELAY_MS } from '../constants.ts'
+import {
+  DEFAULT_MAX_RETRIES,
+  DEFAULT_RETRYABLE_CODES,
+  MAX_TIMER_DELAY_MS,
+} from '../constants.ts'
 import type { BackoffConfig, RetryMode, RetryPolicyConfig } from '../types.ts'
 import { isObject } from '../utils.ts'
 import { Field } from './field.ts'
@@ -44,7 +48,9 @@ export function RetryPolicy(props: RetryPolicyProps) {
         ? { mode: 'always', backoff: next.backoff ?? backoff }
         : {
             mode: 'normal',
-            maxRetries: next.maxRetries ?? 2,
+            // Match the adapter's own default, so a policy built here and a
+            // policy the adapter resolves from an omission behave the same.
+            maxRetries: next.maxRetries ?? DEFAULT_MAX_RETRIES,
             retryableCodes: next.retryableCodes ?? [...DEFAULT_RETRYABLE_CODES],
             backoff: next.backoff ?? backoff,
           },

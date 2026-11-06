@@ -24,21 +24,25 @@ const ID = '@local/dsh-advanced-model-editor'
 /**
  * Platform modules the shell shares into the frozen module table: the exact
  * `PLATFORM_MODULES` list `@deepseek-ai/dsh-client-web` publishes (DSH
- * 0.2.1-rc.2). Each stays an external `require`; everything else is bundled.
- * `dsh-client-store` is deliberately absent — it left the platform table, so a
- * value import from it would now fail the module table at runtime.
+ * 0.2.2-rc.1). Each stays an external `require`; everything else is bundled.
+ *
+ * `test/platform-modules.test.mjs` compares this list with the installed
+ * shell's own declaration, so an upgrade that adds or drops a seed module
+ * fails the suite instead of silently bundling a module the table cannot
+ * answer.
  */
-const PLATFORM_MODULES = [
+export const PLATFORM_MODULES = [
   'react',
   'react/jsx-runtime',
   'react-dom',
   'react-dom/client',
   '@deepseek-ai/cordis',
+  'zod',
+  '@tanstack/react-virtual',
+  '@deepseek-ai/dsh-client-store',
   '@deepseek-ai/dsh-client-ui-slots',
-  '@deepseek-ai/dsh-client-web-react',
   '@deepseek-ai/dsh-client-ui-primitives',
-  '@deepseek-ai/dsh-client-ui-attachment',
-  '@deepseek-ai/dsh-client-schema-form',
+  '@deepseek-ai/dsh-client-ui-dockkit',
 ]
 
 const isPlatformModule = (specifier) => PLATFORM_MODULES.includes(specifier)

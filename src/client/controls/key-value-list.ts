@@ -17,7 +17,7 @@ const e = React.createElement
 export function KeyValueList(props: KeyValueListProps) {
   const values = isObject(props.value) ? props.value : {}
   const levels = props.kind === 'efforts'
-  // Levels come from the namespace schema (DSH 0.2.1 keeps them there), so a
+  // Levels come from the namespace schema (the schema keeps them there), so a
   // level the adapter stops accepting disappears from the picker with it.
   const levelChoices = levels ? reasoningLevelChoices() : []
   const entries = levels

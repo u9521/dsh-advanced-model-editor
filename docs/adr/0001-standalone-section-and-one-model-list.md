@@ -1,6 +1,6 @@
 # ADR-0001: A standalone settings section, and one model list instead of one per namespace
 
-- **Status:** accepted
+- **Status:** accepted; partially superseded by [ADR-0002](./0002-nav-icon-via-the-settings-section-icon-slot.md)
 - **Date:** 2026-10-17
 - **Deciders:** plugin maintainer
 
@@ -41,9 +41,11 @@ difference is a list of `ModelField` descriptors, not a second list module.
   between "inherited" and "explicitly set to the same value" is a first-class
   concept here, and it is what `buildProfileOps`/however `planSave` expresses.
   The official card has no such concept.
-- Owning the section keeps the navigation label, the pen icon and the
-  credential posture display under this plugin's control, which matters because
-  the section is bilingual in a way the official page's copy is not.
+- Owning the section keeps the navigation label and the credential posture
+  display under this plugin's control, which matters because the section is
+  bilingual in a way the official page's copy is not. (The nav icon was listed
+  here too; DSH 0.2.2's `settings.section.icon` now supplies it without this
+  plugin reaching into the shell — see ADR-0002.)
 
 ## Why the model lists merged
 

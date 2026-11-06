@@ -15,6 +15,11 @@ export const CSS = `
       .dsh-ma-error{color:var(--dsw-alias-state-error-primary)}
       .dsh-ma-success{color:var(--dsw-alias-state-success-primary)}
       .dsh-ma-notice{background:var(--dsw-alias-bg-layer-2);border-left:3px solid var(--dsw-alias-state-warn-primary);color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;padding:8px 10px}
+      .dsh-ma-listing{align-items:center;background:var(--dsw-alias-bg-layer-2);border-left:3px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);display:flex;font-size:12px;gap:10px;justify-content:space-between;line-height:18px;padding:8px 10px}
+      .dsh-ma-listing-text{flex:1;min-width:0}
+      .dsh-ma-listing-following{border-left-color:var(--dsw-alias-state-success-primary)}
+      .dsh-ma-listing-customized{border-left-color:var(--dsw-alias-state-warn-primary)}
+      .dsh-ma-button-quiet{flex:none;font-size:12px;height:26px;line-height:18px;padding:0 8px}
       .dsh-ma-list,.dsh-ma-form{display:flex;flex-direction:column}
       .dsh-ma-section-title{color:var(--dsw-alias-label-secondary);font-size:12px;font-weight:600;line-height:18px;margin:18px 0 4px}
       .dsh-ma-section-title:first-child{margin-top:0}

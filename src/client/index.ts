@@ -44,51 +44,43 @@ export function apply(ctx: any) {
     document.head.appendChild(style)
     return () => style.remove()
   }, 'model-advanced: styles')
-  // The settings shell renders a nav glyph per section id and falls back to the
-  // gear for ids it does not know (model-advanced is not known), so the nav
-  // icon is swapped for this plugin's mark after the panel paints.
-  const makeMarkSvg = () => {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('viewBox', '0 0 24 24')
-    svg.setAttribute('fill', 'none')
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    path.setAttribute('d', MARK_PATH)
-    path.setAttribute('stroke', 'currentColor')
-    path.setAttribute('stroke-width', String(MARK_STROKE))
-    path.setAttribute('stroke-linecap', 'round')
-    path.setAttribute('stroke-linejoin', 'round')
-    svg.appendChild(path)
-    return svg
-  }
-  const swapNavIcon = () => {
-    const label = tr('nav')
-    for (const button of document.querySelectorAll('button')) {
-      const span = button.querySelector('span')
-      if (!span || span.textContent !== label) continue
-      const icon = button.querySelector('svg')
-      if (!icon || icon.dataset.dshMaIcon === 'mark') continue
-      const mark = makeMarkSvg()
-      for (const name of ['width', 'height', 'class']) {
-        const value = icon.getAttribute(name)
-        if (value !== null) mark.setAttribute(name, value)
-      }
-      mark.dataset.dshMaIcon = 'mark'
-      icon.replaceWith(mark)
-    }
-  }
-  ctx.effect(() => {
-    swapNavIcon()
-    let frame = 0
-    const observer = new MutationObserver(() => {
-      if (frame !== 0) return
-      frame = requestAnimationFrame(() => {
-        frame = 0
-        if (document.querySelector('[role="dialog"]') !== null) swapNavIcon()
-      })
-    })
-    observer.observe(document.body, { childList: true, subtree: true })
-    return () => observer.disconnect()
-  }, 'model-advanced: nav icon')
+  // The shell renders one nav glyph per section and keeps its own default for
+  // ids it has no glyph for; `settings.section.icon` replaces that glyph for the
+  // matching section id without this plugin reaching into the shell's DOM.
+  ctx.effect(
+    () =>
+      ctx.slots.inject('settings.section.icon', () =>
+        ctx.slots.register(
+          {
+            name: 'settings.section.icon',
+            // The shell addresses the glyph by section id, so this must equal
+            // the `settings.section` id below; an unmatched id never renders.
+            id: 'model-advanced',
+            order: 11,
+          },
+          function NavMark({ size }: { size: number }) {
+            return e(
+              'svg',
+              {
+                viewBox: '0 0 24 24',
+                width: size,
+                height: size,
+                fill: 'none',
+                'aria-hidden': 'true',
+              },
+              e('path', {
+                d: MARK_PATH,
+                stroke: 'currentColor',
+                strokeWidth: MARK_STROKE,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+              }),
+            )
+          },
+        ),
+      ),
+    'model-advanced: nav icon',
+  )
   const api = createModelApi(ctx)
   const services: SettingsServices = {
     configForms: ctx.configForms,
@@ -118,6 +110,10 @@ export function apply(ctx: any) {
         () => void describe.ensure(),
       ),
       ctx.remote.$on('llm/adapters-updated', () => void describe.ensure()),
+      // A provider's advertised models or display metadata changed. The
+      // official route reloads its listing in the background, so the page
+      // re-reads the same describe answer a selector would.
+      ctx.remote.$on('llm/models-updated', () => void describe.ensure()),
       ctx.on('connection/reset', () => void describe.ensure()),
     ]
     return () => {
@@ -144,6 +140,7 @@ export function apply(ctx: any) {
                 api,
                 describe,
                 configForms: services.configForms,
+                settingsSchema: services.settingsSchema,
               })
             },
           ),

@@ -32,6 +32,8 @@ export const PROFILE_FIELDS: string[] = [
   'websocketConnectTimeoutMs',
   'streamIdleTimeoutMs',
   'maxRequestImageBytes',
+  'maxRequestImages',
+  'imageOffloadCountQuantum',
   'requestImagePixelBudget',
   'requestImageMaxBytes',
   'retryPolicy',
@@ -46,6 +48,8 @@ export const OFFICIAL_FIELDS: string[] = [
   'defaultContextWindow',
   'models',
   'streamIdleTimeoutMs',
+  'modelsTimeoutMs',
+  'modelsMaxAgeMs',
   'maxRequestFilesBytes',
   'maxInlineRequestImageBytes',
   'maxImagesPerRequest',
@@ -86,9 +90,10 @@ export const THINKING_FORMATS: string[] = [
   'ant-ling',
 ]
 
+// Declaration order is the adapter's own, which is what a select shows.
 export const MAX_TOKENS_FIELDS: string[] = [
-  'max_tokens',
   'max_completion_tokens',
+  'max_tokens',
 ]
 
 export const THINKING_TOKEN_BUDGET_FIELDS: string[] = [
@@ -120,6 +125,14 @@ export const CACHE_RETENTIONS: CacheRetention[] = ['none', 'short', 'long']
 export const OFFICIAL_THINKING: string[] = ['enabled', 'disabled']
 export const OFFICIAL_REASONING: string[] = ['off', 'low', 'high', 'max']
 export const TOOL_UPDATES: ToolUpdate[] = ['in-history', 'addition-only']
+
+// The adapter's own defaults for the fields a normal policy may omit. Kept
+// beside the codes because both describe the same shape, and read by the
+// control so a policy the user builds matches one the adapter would build.
+export const DEFAULT_MAX_RETRIES = 5
+export const DEFAULT_INITIAL_DELAY_MS = 500
+export const DEFAULT_MAX_DELAY_MS = 10000
+export const DEFAULT_JITTER_RATIO = 0.1
 
 export const DEFAULT_RETRYABLE_CODES: string[] = [
   'EMPTY_RESPONSE',

@@ -201,7 +201,7 @@ export function validateRetryPolicy(value: unknown): string[] {
 /**
  * Validate one pi-ai provider profile before a write.
  *
- * `apiKeyEnv` stays optional by design: DSH 0.2.1 reports the authentication a
+ * `apiKeyEnv` stays optional by design: the provider directory reports the authentication a
  * route performs without a credential reference (`nativeAuth`), so a keyless
  * route is a complete configuration, not an unfinished one. Only a reference
  * that IS present must be a legal environment-variable name.
@@ -306,6 +306,8 @@ export function validateProfile(profile: unknown): string[] {
     )
   for (const field of [
     'maxRequestImageBytes',
+    'maxRequestImages',
+    'imageOffloadCountQuantum',
     'requestImagePixelBudget',
     'requestImageMaxBytes',
   ])
@@ -318,6 +320,21 @@ export function validateProfile(profile: unknown): string[] {
         Number.MAX_SAFE_INTEGER,
         true,
       )
+  // The offload step is bounded by the count it removes from, so the adapter
+  // refuses a quantum larger than the request's own image cap.
+  if (
+    owns(profile, 'imageOffloadCountQuantum') &&
+    owns(profile, 'maxRequestImages') &&
+    typeof profile.imageOffloadCountQuantum === 'number' &&
+    typeof profile.maxRequestImages === 'number' &&
+    profile.imageOffloadCountQuantum > profile.maxRequestImages
+  )
+    errors.push(
+      tr('validation.quantumExceedsMax', {
+        field: tr('field.imageOffloadCountQuantum'),
+        max: tr('field.maxRequestImages'),
+      }),
+    )
   if (owns(profile, 'compat'))
     validateCompat(profile.compat, tr('field.compat'), errors, api)
   if (owns(profile, 'retryPolicy'))
@@ -447,7 +464,22 @@ export function validateOfficialProfile(profile: unknown): string[] {
         max: tr('field.maxImagesPerRequest'),
       }),
     )
-  for (const field of ['streamIdleTimeoutMs', 'filesApiTimeoutMs'])
+  // The listing refresh interval is the one delay where zero is meaningful: it
+  // refreshes on every access and turns automatic refresh off.
+  if (owns(profile, 'modelsMaxAgeMs'))
+    numberError(
+      profile.modelsMaxAgeMs,
+      'field.modelsMaxAgeMs',
+      errors,
+      0,
+      MAX_TIMER_DELAY_MS,
+      true,
+    )
+  for (const field of [
+    'streamIdleTimeoutMs',
+    'modelsTimeoutMs',
+    'filesApiTimeoutMs',
+  ])
     if (owns(profile, field))
       numberError(
         profile[field],

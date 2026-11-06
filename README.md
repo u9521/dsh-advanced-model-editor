@@ -11,15 +11,18 @@ Reads and writes ride DSH's shared settings services (`ctx.configForms` /
 `ctx.settingsSchema`), so this page and the official Models page share one document
 mirror and one revision queue instead of racing each other. The section appears only
 while one of its namespaces is actually served, and it shows the provider facts DSH
-0.2.1 reports — the endpoint a profile inherits (`defaultBaseURL` / `baseURLEnv`), the
-route's own authentication (`nativeAuth`, including OAuth) and any catalog diagnostic —
-so a keyless route no longer reads as a missing credential.
+directory reports — the endpoint a profile inherits (`defaultBaseURL` / `baseURLEnv`),
+the route's own authentication (`nativeAuth`, including OAuth) and any catalog
+diagnostic — so a keyless route no longer reads as a missing credential.
 
-![Screenshot](docs/pics/screenshot.png)
+The official DeepSeek card also shows how its catalog relates to the service's
+model listing: whether the route still follows `GET /models`, whether an edited
+catalog replaced it, or whether the endpoint is not the official one at all — with
+a **Restore defaults** action that clears the override and resumes the listing.
 
 ## Requirements
 
-- **DSH** `>= 0.2.1-rc.2` — only the current release is supported. There is no
+- **DSH** `>= 0.2.2-rc.1` — only the current release is supported. There is no
   backward-compatibility layer for older DSH versions.
 - **Node.js** `^22.19 || >=24`.
 

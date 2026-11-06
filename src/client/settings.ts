@@ -2,10 +2,10 @@ import { tr } from './i18n.ts'
 import type { SettingsNamespaceView, SettingsPathOp } from './types.ts'
 
 /**
- * The settings faces this page consumes from DSH 0.2.1's shared settings
- * services (`ctx.configForms` / `ctx.settingsSchema`). DSH 0.2.1 made those
- * services the only describe reader and the only revision queue, so the page
- * never sends `expectedRevision` and never keeps a revision of its own.
+ * The settings faces this page consumes from DSH's shared settings services
+ * (`ctx.configForms` / `ctx.settingsSchema`). Those services are the only
+ * describe reader and the only revision queue, so the page never sends
+ * `expectedRevision` and never keeps a revision of its own.
  */
 export interface SettingsDescribeSnapshot {
   /** `ready` persists across later failed refreshes; the held view keeps serving. */
@@ -42,6 +42,8 @@ export interface SchemaNode {
   sKey?: SchemaNode
   list?: SchemaNode[]
   value?: unknown
+  /** Schemastery node metadata; `default` survives `toJSON()`/rehydration. */
+  meta?: { default?: unknown }
 }
 
 /** The settings services this page needs from the client context. */
@@ -147,6 +149,29 @@ export function unionValues(
   return node.list.flatMap((member) =>
     typeof member.value === 'string' ? [member.value] : [],
   )
+}
+
+/**
+ * Read the schema default declared at one path.
+ *
+ * Schemastery serializes `.default(value)` into the node's `meta.default`, so a
+ * browser-side reader can tell "this value is the shipped default" from "the
+ * user chose this value" without hard-coding the default. The official route
+ * uses it to decide whether its catalog is still the built-in one, which is
+ * the condition under which the adapter follows the service's model listing.
+ * @param schema - settings schema service.
+ * @param view - the namespace view carrying the serialized schema.
+ * @param path - path from the section root to the defaulted node.
+ * @returns the declared default, or undefined when the node declares none.
+ */
+export function schemaDefault(
+  schema: SettingsServices['settingsSchema'],
+  view: SettingsNamespaceView | undefined,
+  path: readonly string[],
+): unknown {
+  if (view === undefined) return undefined
+  const node = schema.nodeAtPath(schema.rehydrate(view.schema), path)
+  return node?.meta?.default
 }
 
 /**

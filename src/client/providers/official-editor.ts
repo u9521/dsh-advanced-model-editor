@@ -6,6 +6,7 @@ import {
   OFFICIAL_THINKING,
 } from '../constants.ts'
 import { commit, outcomeMessage } from '../commit.ts'
+import { listingFollow, restoreDefaultOps } from '../listing.ts'
 import { planReplace } from '../plan.ts'
 import {
   CapacityInput,
@@ -29,6 +30,8 @@ import { CredentialField } from './credential-field.ts'
 
 export interface OfficialProviderEditorProps {
   namespace: SettingsNamespaceView
+  /** Schema default for `models` — the built-in catalog the adapter compares against. */
+  builtInCatalog: unknown
   api: ModelApi
   form: ConfigForm
   writable: boolean
@@ -43,6 +46,7 @@ function translatedChoices(values: readonly string[], prefix: string) {
 
 export function OfficialProviderEditor({
   namespace,
+  builtInCatalog,
   api,
   form,
   writable,
@@ -95,6 +99,28 @@ export function OfficialProviderEditor({
     setBusy(false)
   }
   const readOnly = !writable || busy
+  // The adapter follows `GET /models` only while `models` is still the built-in
+  // catalog and the route is on the official origin. Editing the list is
+  // therefore a behaviour change, not just a data edit, so the editor states
+  // which side of it the user is on and offers the way back.
+  const listing = listingFollow(namespace?.user, builtInCatalog)
+  // Restoring goes through the same ordered commit the form uses — write the
+  // batch, reload, report — rather than a second copy of that rule. It carries
+  // no credential, and the write bumps the revision, so the draft resets to
+  // the built-in catalog the Host now serves.
+  const restore = async () => {
+    setBusy(true)
+    setFailure('')
+    const outcome = await commit({
+      form,
+      ops: restoreDefaultOps([]),
+      api,
+      reload,
+    })
+    const message = outcomeMessage(outcome)
+    if (message !== undefined) setFailure(message)
+    setBusy(false)
+  }
   return e(
     'section',
     { className: 'dsh-ma-provider', 'data-settings-ns': OFFICIAL_NS },
@@ -231,6 +257,30 @@ export function OfficialProviderEditor({
             'div',
             { className: 'dsh-ma-group' },
             e('h3', { className: 'dsh-ma-group-title' }, tr('group.models')),
+            e(
+              'div',
+              {
+                className: `dsh-ma-listing dsh-ma-listing-${listing}`,
+                role: 'status',
+              },
+              e(
+                'span',
+                { className: 'dsh-ma-listing-text' },
+                tr(`listing.${listing}`),
+              ),
+              listing === 'customized'
+                ? e(
+                    'button',
+                    {
+                      type: 'button',
+                      className: 'dsh-ma-button dsh-ma-button-quiet',
+                      disabled: readOnly,
+                      onClick: restore,
+                    },
+                    tr('listing.restore'),
+                  )
+                : null,
+            ),
             e(ModelList, {
               value: draft.models,
               shape: 'array',
@@ -396,6 +446,34 @@ export function OfficialProviderEditor({
                   value: draft.streamIdleTimeoutMs,
                   disabled: readOnly,
                   onChange: (value) => setField('streamIdleTimeoutMs', value),
+                }),
+              ),
+              // Listing timing joined the route's own settings: the deadline of
+              // one `/models` request and the interval its answer is reused for.
+              e(
+                Field,
+                { labelKey: 'field.modelsTimeoutMs' },
+                e(TextInput, {
+                  type: 'number',
+                  min: 1,
+                  max: MAX_TIMER_DELAY_MS,
+                  value: draft.modelsTimeoutMs,
+                  disabled: readOnly,
+                  placeholderKey: 'placeholder.modelsTimeoutMs',
+                  onChange: (value) => setField('modelsTimeoutMs', value),
+                }),
+              ),
+              e(
+                Field,
+                { labelKey: 'field.modelsMaxAgeMs' },
+                e(TextInput, {
+                  type: 'number',
+                  min: 0,
+                  max: MAX_TIMER_DELAY_MS,
+                  value: draft.modelsMaxAgeMs,
+                  disabled: readOnly,
+                  placeholderKey: 'placeholder.modelsMaxAgeMs',
+                  onChange: (value) => setField('modelsMaxAgeMs', value),
                 }),
               ),
               e(

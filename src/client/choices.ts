@@ -11,7 +11,7 @@ import type { ReasoningEfforts, SettingsNamespaceView } from './types.ts'
 /**
  * Live option and field sets derived from a namespace's own serialized schema.
  *
- * DSH 0.2.1 made the schema the single source for the choices a settings
+ * The schema is the single source for the choices a settings
  * surface offers: the official Models page reads the protocol union and the
  * reasoning-level key union out of `settings.describe` rather than keeping a
  * copy (see `protocolChoices` / `reasoningLevelChoices` there). This module

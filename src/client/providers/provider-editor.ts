@@ -54,7 +54,7 @@ function translatedChoices(values: readonly string[], prefix: string) {
 /**
  * The endpoint this route uses when the profile sets no `baseURL`: the
  * adapter's fixed default, or the environment variables that build it. DSH
- * 0.2.1 added both facts to the configurable-provider directory, and showing
+ * The configurable-provider directory reports both facts, and showing
  * them stops an empty field from looking like a missing endpoint.
  * @param row - one directory row.
  * @returns the placeholder text, or undefined when the route declares neither.
@@ -307,6 +307,28 @@ export function ProviderEditor({
             placeholderKey: 'placeholder.requestImageMaxBytes',
             ariaLabelKey: 'field.requestImageMaxBytes',
             onChange: (value) => setField('requestImageMaxBytes', value),
+          }),
+        ),
+        // The count bound is the sibling of the byte bound above it: one caps
+        // how many images a request carries, the other how much they weigh.
+        field(
+          'maxRequestImages',
+          e(CapacityInput, {
+            value: draft.maxRequestImages,
+            disabled: !explicit.maxRequestImages || readOnly,
+            placeholderKey: 'placeholder.maxRequestImages',
+            ariaLabelKey: 'field.maxRequestImages',
+            onChange: (value) => setField('maxRequestImages', value),
+          }),
+        ),
+        field(
+          'imageOffloadCountQuantum',
+          e(CapacityInput, {
+            value: draft.imageOffloadCountQuantum,
+            disabled: !explicit.imageOffloadCountQuantum || readOnly,
+            placeholderKey: 'placeholder.imageOffloadCountQuantum',
+            ariaLabelKey: 'field.imageOffloadCountQuantum',
+            onChange: (value) => setField('imageOffloadCountQuantum', value),
           }),
         ),
       ),

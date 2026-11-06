@@ -383,87 +383,66 @@ test('main plugin registers locale dictionaries and the additive settings sectio
     locale,
     on: () => () => {},
     slots: {
+      // Two slots are declared now: the section itself and the nav glyph that
+      // addresses it by id. The fake records one registration per slot name.
       inject: (name, callback) => {
-        injected = { name, callback }
+        injected ??= []
+        injected.push({ name, callback })
       },
       register: (options, component) => {
-        registered = { options, component }
+        registered ??= []
+        registered.push({ options, component })
         return () => {}
       },
     },
   }
-  // The nav swap replaces the shell's fallback glyph, so the fake DOM has to
-  // return one: a button whose span carries the nav label and whose svg the
-  // plugin should replace.
-  const swapped = []
-  const fallbackIcon = {
-    dataset: {},
-    getAttribute: (name) =>
-      ({ width: '16', height: '16', class: 'nav-glyph' })[name] ?? null,
-    replaceWith: (next) => swapped.push(next),
-  }
   global.document = {
     createElement: () => ({ dataset: {}, remove() {} }),
-    createElementNS: (_ns, tag) => ({
-      tag,
-      dataset: {},
-      attrs: {},
-      children: [],
-      setAttribute(name, value) {
-        this.attrs[name] = value
-      },
-      appendChild(child) {
-        this.children.push(child)
-      },
-    }),
-    querySelectorAll: (selector) =>
-      selector === 'button'
-        ? [
-            {
-              querySelector: (inner) =>
-                inner === 'span'
-                  ? { textContent: 'Advanced Model Configuration' }
-                  : inner === 'svg'
-                    ? fallbackIcon
-                    : null,
-            },
-          ]
-        : [],
-    querySelector: () => null,
     head: { appendChild() {} },
   }
-  global.MutationObserver = class {
-    constructor() {}
-    observe() {}
-    disconnect() {}
-  }
-  global.requestAnimationFrame = () => 0
   client.apply(ctx)
   assert.ok(dictionaries.zh && dictionaries.en)
   assert.equal(dictionaries.zh.nav, '模型高级配置')
   assert.equal(dictionaries.en.nav, 'Advanced Model Configuration')
+  // Both contributions depend on the shell having declared their target slot
+  // first, so each arrives through slots.inject in registration order.
+  assert.deepEqual(
+    injected.map((entry) => entry.name),
+    ['settings.section.icon', 'settings.section'],
+  )
+  for (const entry of injected) entry.callback()
+  const icon = registered.find(
+    (entry) => entry.options.name === 'settings.section.icon',
+  )
+  const section = registered.find(
+    (entry) => entry.options.name === 'settings.section',
+  )
+  // The nav glyph is addressed by the section id, so the shell can render it
+  // inline with the label and fall back to its own glyph for unknown ids.
+  assert.equal(icon.options.id, 'model-advanced')
+  assert.equal(icon.options.order, 11)
+  // The icon's label is never displayed; the section owns the accessible text.
+  assert.equal(icon.options.label, undefined)
+  assert.equal(section.options.id, icon.options.id)
+  const rendered = icon.component({ size: 16, active: true })
+  assert.equal(rendered.type, 'svg')
+  assert.equal(rendered.props.viewBox, '0 0 24 24')
+  assert.equal(rendered.props.width, 16)
+  assert.equal(rendered.props.height, 16)
+  assert.equal(rendered.props.fill, 'none')
+  // The stub createElement keeps children on the element, not in props.
+  const [path] = rendered.children
+  assert.equal(path.props.d, iconMark.MARK_PATH)
+  assert.equal(path.props.stroke, 'currentColor')
+  assert.equal(path.props.strokeWidth, iconMark.MARK_STROKE)
+  assert.equal(path.props.strokeLinecap, 'round')
+  assert.equal(path.props.strokeLinejoin, 'round')
   // The section exists only while an LLM adapter namespace is served.
   assert.deepEqual(served.namespaces, ['llm-pi-ai', 'llm-deepseek'])
-  assert.equal(injected.name, 'settings.section')
-  injected.callback()
-  assert.equal(registered.options.id, 'model-advanced')
-  assert.equal(registered.options.label(), 'Advanced Model Configuration')
-  assert.equal(typeof registered.component, 'function')
-  // The nav glyph is swapped for this plugin's mark, stroked with the shell's
-  // own text colour so it follows the theme.
-  assert.equal(swapped.length, 1)
-  const [mark] = swapped
-  assert.equal(mark.attrs.viewBox, '0 0 24 24')
-  assert.equal(mark.dataset.dshMaIcon, 'mark')
-  assert.equal(mark.attrs.width, '16')
-  assert.equal(mark.attrs.class, 'nav-glyph')
-  assert.equal(mark.children.length, 1)
-  assert.equal(mark.children[0].attrs.d, iconMark.MARK_PATH)
-  assert.equal(mark.children[0].attrs.stroke, 'currentColor')
-  assert.equal(mark.children[0].attrs['stroke-width'], '2.1')
+  assert.equal(section.options.id, 'model-advanced')
+  assert.equal(section.options.label(), 'Advanced Model Configuration')
+  assert.equal(typeof section.component, 'function')
   delete global.document
-  delete global.MutationObserver
-  delete global.requestAnimationFrame
 })
 
 test('host half is a no-op plugin node with an empty inject list', () => {
@@ -519,4 +498,39 @@ test('dist packaging workflow copies runtime JS plus the display metadata', () =
   assert.doesNotMatch(workflow, /\.dist\/\.gitignore/)
   // Verifies that dist package.json does not declare types
   assert.doesNotMatch(workflow, /types:\s*pkg\.types/)
+})
+
+test('the official editor states its listing posture and offers the way back', () => {
+  const editor = source('src/client/providers/official-editor.ts')
+  // The banner is driven by one classifier, never by an ad-hoc comparison in
+  // the component.
+  assert.match(editor, /listingFollow\(namespace\?\.user, builtInCatalog\)/)
+  assert.match(editor, /dsh-ma-listing-\$\{listing\}/)
+  // Restoring is the same ordered commit the form uses, so the conflict and
+  // credential-failure rules cannot drift between the two paths.
+  assert.match(editor, /ops: restoreDefaultOps\(\[\]\)/)
+  assert.match(editor, /outcomeMessage\(outcome\)/)
+  // The listing copy exists in both dictionaries under the same three keys.
+  for (const key of ['following', 'customized', 'not-applicable', 'restore']) {
+    assert.ok(
+      locales.en.listing[key] !== undefined,
+      `en.listing.${key} missing`,
+    )
+    assert.ok(
+      locales.zh.listing[key] !== undefined,
+      `zh.listing.${key} missing`,
+    )
+  }
+})
+
+test('the nav glyph is a slot contribution, not a DOM rewrite', () => {
+  const index = source('src/client/index.ts')
+  assert.match(index, /ctx\.slots\.inject\('settings\.section\.icon'/)
+  assert.match(index, /name: 'settings\.section\.icon'/)
+  assert.match(index, /id: 'model-advanced'/)
+  // The DOM scan and its observer are gone; anything resembling them coming
+  // back is a regression to the fragile path DSH 0.2.2 replaced.
+  assert.doesNotMatch(index, /MutationObserver/)
+  assert.doesNotMatch(index, /querySelectorAll\('button'\)/)
+  assert.doesNotMatch(index, /replaceWith\(/)
 })

@@ -6,6 +6,7 @@ import {
   ensureDescribe,
   namespaceView,
   objectFields,
+  schemaDefault,
   unionValues,
   writeOps,
 } from '../src/client/settings.ts'
@@ -222,4 +223,27 @@ test('dictKeys unwraps the union around reasoningEfforts', () => {
     ]),
     ['off', 'high', 'max'],
   )
+})
+
+test('schemaDefault reads the node default schemastery serializes', () => {
+  const schema = schemaFace()
+  const nodes = schemaNode({
+    type: 'object',
+    dict: {
+      models: schemaNode({
+        type: 'array',
+        meta: { default: [{ id: 'deepseek-flash' }] },
+      }),
+      plain: schemaNode({ type: 'string' }),
+    },
+  })
+  const view = namespaceViewOf('llm-deepseek', nodes)
+  assert.deepEqual(schemaDefault(schema, view, ['models']), [
+    { id: 'deepseek-flash' },
+  ])
+  // A node that declares no default states none, and an absent path is the
+  // same answer: the caller must not mistake "no default" for "empty default".
+  assert.equal(schemaDefault(schema, view, ['plain']), undefined)
+  assert.equal(schemaDefault(schema, view, ['missing']), undefined)
+  assert.equal(schemaDefault(schema, undefined, ['models']), undefined)
 })

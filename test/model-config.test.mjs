@@ -10,6 +10,12 @@ import {
 } from '../src/client/constants.ts'
 import { planSave } from '../src/client/plan.ts'
 import {
+  listingFollow,
+  listingStateFor,
+  onOfficialOrigin,
+  restoreDefaultOps,
+} from '../src/client/listing.ts'
+import {
   disclosedModalities,
   discoveredModelProfile,
   hasUserProfile,
@@ -152,6 +158,8 @@ test('declares every llm-pi-ai provider field', () => {
     'websocketConnectTimeoutMs',
     'streamIdleTimeoutMs',
     'maxRequestImageBytes',
+    'maxRequestImages',
+    'imageOffloadCountQuantum',
     'requestImagePixelBudget',
     'requestImageMaxBytes',
     'retryPolicy',
@@ -179,6 +187,8 @@ test('declares every llm-pi-ai provider field', () => {
     'websocketConnectTimeoutMs',
     'streamIdleTimeoutMs',
     'maxRequestImageBytes',
+    'maxRequestImages',
+    'imageOffloadCountQuantum',
     'requestImagePixelBudget',
     'requestImageMaxBytes',
     'retryPolicy',
@@ -193,6 +203,8 @@ test('declares every llm-pi-ai provider field', () => {
     'defaultContextWindow',
     'models',
     'streamIdleTimeoutMs',
+    'modelsTimeoutMs',
+    'modelsMaxAgeMs',
     'maxRequestFilesBytes',
     'maxInlineRequestImageBytes',
     'maxImagesPerRequest',
@@ -350,7 +362,7 @@ test('only user-layer profiles count as user-added rows', () => {
 })
 
 test('a native-auth route needs no credential reference', () => {
-  // DSH 0.2.1 reports the authentication a keyless route performs, so an
+  // The provider directory reports the authentication a keyless route performs, so an
   // empty apiKeyEnv is a complete profile rather than an unfinished one.
   assert.deepEqual(
     validateProfile({
@@ -752,4 +764,106 @@ test('projects discovered models onto the pi-ai shape and adopts disclosed modal
     discoveredModelProfile({ id: 'unknown-modalities', inputModalities: [] }),
     { id: 'unknown-modalities' },
   )
+})
+
+test('names the official listing relationship from the user layer', () => {
+  const builtIn = [{ id: 'deepseek-flash' }, { id: 'deepseek-v4-pro' }]
+  // No user override at all: the schema default resolves and the adapter
+  // follows the service listing.
+  assert.equal(listingFollow(undefined, builtIn), 'following')
+  assert.equal(listingFollow({}, builtIn), 'following')
+  // A list equal to the built-in catalog counts as uncustomized upstream, so
+  // the page must not claim the listing stopped.
+  assert.equal(
+    listingFollow(
+      { models: [{ id: 'deepseek-flash' }, { id: 'deepseek-v4-pro' }] },
+      builtIn,
+    ),
+    'following',
+  )
+  // Any difference replaces the catalog and stops listing requests.
+  assert.equal(
+    listingFollow({ models: [{ id: 'deepseek-flash' }] }, builtIn),
+    'customized',
+  )
+  assert.equal(listingFollow({ models: [] }, builtIn), 'customized')
+  // A schema that declares no default cannot be compared, so a stored list is
+  // customized by construction.
+  assert.equal(listingFollow({ models: builtIn }, undefined), 'customized')
+})
+
+test('classifies the official origin the adapter would query', () => {
+  assert.equal(onOfficialOrigin(undefined), true)
+  assert.equal(onOfficialOrigin(''), true)
+  assert.equal(onOfficialOrigin('   '), true)
+  assert.equal(onOfficialOrigin('https://api.deepseek.com'), true)
+  assert.equal(onOfficialOrigin('https://api.deepseek.com/anthropic'), true)
+  assert.equal(onOfficialOrigin('https://gateway.example.com/anthropic'), false)
+  // An unparseable value is not the official origin, and must not throw.
+  assert.equal(onOfficialOrigin('not a url'), false)
+})
+
+test('endpoint condition short-circuits the catalog comparison', () => {
+  const builtIn = [{ id: 'deepseek-flash' }]
+  const customized = { user: { models: [{ id: 'other' }] } }
+  assert.equal(
+    listingStateFor(customized, 'https://gateway.example.com', builtIn),
+    'not-applicable',
+  )
+  assert.equal(listingStateFor(customized, undefined, builtIn), 'customized')
+  assert.equal(listingStateFor({ user: {} }, undefined, builtIn), 'following')
+})
+
+test('restoring the default removes only the user models key', () => {
+  assert.deepEqual(restoreDefaultOps([]), [{ op: 'unset', path: ['models'] }])
+  assert.deepEqual(restoreDefaultOps(['providers', 'deepseek']), [
+    { op: 'unset', path: ['providers', 'deepseek', 'models'] },
+  ])
+})
+
+test('validates the pi-ai image-count pair against each other', () => {
+  const base = { api: 'openai-completions', models: [] }
+  assert.deepEqual(
+    validateProfile({
+      ...base,
+      maxRequestImages: 50,
+      imageOffloadCountQuantum: 10,
+    }),
+    [],
+  )
+  // The quantum may equal the cap but never exceed it, matching the adapter's
+  // own bound rather than a stricter one of the page's invention.
+  assert.deepEqual(
+    validateProfile({
+      ...base,
+      maxRequestImages: 10,
+      imageOffloadCountQuantum: 10,
+    }),
+    [],
+  )
+  assert.equal(
+    validateProfile({
+      ...base,
+      maxRequestImages: 10,
+      imageOffloadCountQuantum: 11,
+    }).length,
+    1,
+  )
+  // Each is independently a positive integer.
+  assert.equal(validateProfile({ ...base, maxRequestImages: 0 }).length, 1)
+  assert.equal(
+    validateProfile({ ...base, imageOffloadCountQuantum: 0 }).length,
+    1,
+  )
+})
+
+test('accepts the official listing timing fields, including a zero refresh', () => {
+  assert.deepEqual(
+    validateOfficialProfile({ modelsTimeoutMs: 5000, modelsMaxAgeMs: 600000 }),
+    [],
+  )
+  // Zero is meaningful here: refresh on access, no automatic refresh.
+  assert.deepEqual(validateOfficialProfile({ modelsMaxAgeMs: 0 }), [])
+  assert.equal(validateOfficialProfile({ modelsMaxAgeMs: -1 }).length, 1)
+  assert.equal(validateOfficialProfile({ modelsTimeoutMs: 0 }).length, 1)
 })
