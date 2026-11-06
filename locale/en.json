@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Advanced Model Configuration",
+    "description": "Edit provider routes, model catalogs and compatibility switches that the built-in Models page does not expose."
+  }
+}
