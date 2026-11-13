@@ -129,6 +129,7 @@ export const en: LocaleDictionary = {
     officialBaseURL: 'https://api.deepseek.com',
     apiKeyEnv: 'PROVIDER_API_KEY',
     baseURL: 'https://api.example.com/v1',
+    baseURLGemini: 'https://generativelanguage.googleapis.com/v1beta',
     deepseekURL: 'https://api.deepseek.com',
     providerName: 'My Provider',
     headerName: 'Header name',
@@ -198,6 +199,8 @@ export const en: LocaleDictionary = {
     object: '{field} must be an object.',
     invalid: '{field} is invalid.',
     efforts: 'Reasoning efforts must be false or a non-empty map.',
+    effortsNeedsLevel:
+      'Reasoning efforts must offer at least one level besides off.',
     modelId: '{index} has an invalid model ID.',
     modalities: 'Input modalities are invalid.',
     retry: 'Retry policy is invalid.',
@@ -206,6 +209,10 @@ export const en: LocaleDictionary = {
     credentialRef:
       'Credential reference must be a valid environment variable name.',
     protocol: 'API protocol is invalid.',
+    geminiLevel:
+      'Gemini accepts only minimal, low, medium, and high reasoning levels; {level} is not one of them.',
+    geminiValue:
+      'Gemini resolves {level} through its thinking level map, so the wire value must be minimal, low, medium, or high.',
     modalitiesRequired: 'Default input modalities must be non-empty.',
     headers: 'Headers are invalid.',
     reasoning: 'Default reasoning level is invalid.',
@@ -312,6 +319,7 @@ export const en: LocaleDictionary = {
       'openai-completions': 'OpenAI Completions',
       'openai-responses': 'OpenAI Responses',
       'anthropic-messages': 'Anthropic Messages',
+      'google-generative-ai': 'Gemini API',
     },
     modality: { text: 'Text', image: 'Image' },
     reasoningLevel: {

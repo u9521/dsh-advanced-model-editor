@@ -20,11 +20,18 @@ model listing: whether the route still follows `GET /models`, whether an edited
 catalog replaced it, or whether the endpoint is not the official one at all — with
 a **Restore defaults** action that clears the override and resumes the listing.
 
+Routes can speak OpenAI Completions, OpenAI Responses, Anthropic Messages or the
+Gemini API. The persona editor narrows itself to what each protocol accepts: Gemini
+routes offer only the four reasoning levels its implementation recognizes, take
+their effort values from the same fixed vocabulary, and show no compatibility
+switch at all — pi-ai gives that protocol no compat type, so a switch set on it
+would be skipped or refused.
+
 ## Requirements
 
-- **DSH** `>= 0.2.2-rc.1` — only the current release is supported. There is no
+- **DSH** `>= 0.2.2-rc.2` — only the current release is supported. There is no
   backward-compatibility layer for older DSH versions.
-- **Node.js** `^22.19 || >=24`.
+- **Node.js** `>=24.9.0`, the version DSH itself now requires.
 
 ---
 
@@ -61,7 +68,7 @@ Then **restart web** and **hard-refresh** your browser.
 - **pnpm installed** — `npx get-pnpm` (see https://pnpm.io/installation; alternatives:
   `corepack enable` or `npm install -g pnpm`). Required both for building and because
   `dsh plugin --profile web add` forwards to pnpm internally.
-- **Node.js** `^22.19 || >=24`.
+- **Node.js** `>=24.9.0`.
 
 ### 1. Clone
 

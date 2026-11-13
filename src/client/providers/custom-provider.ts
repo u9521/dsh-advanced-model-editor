@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { SETTINGS_NS } from '../constants.ts'
+import { GEMINI_PROTOCOL, SETTINGS_NS } from '../constants.ts'
 import { Field, ProtocolSelect, TextInput } from '../controls/index.ts'
 import { ModelList } from '../models/index.ts'
 import { PI_AI_MODEL_FIELDS } from '../models/model-fields.ts'
@@ -126,7 +126,12 @@ export function CreateCustomProvider({
         e(TextInput, {
           value: baseURL,
           disabled,
-          placeholderKey: 'placeholder.baseURL',
+          // Gemini's own base URL carries the API version, so the example
+          // endpoint differs from the OpenAI-compatible one beside it.
+          placeholderKey:
+            protocol === GEMINI_PROTOCOL
+              ? 'placeholder.baseURLGemini'
+              : 'placeholder.baseURL',
           onChange: (value) => setBaseURL(String(value || '')),
         }),
       ),

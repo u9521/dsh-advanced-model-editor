@@ -10,6 +10,17 @@ export interface KeyValueListProps {
   value?: Record<string, string | number | null>
   onChange?: (value: Record<string, string | number | null>) => void
   disabled?: boolean
+  /**
+   * The levels an `efforts` list may key, when the owning protocol narrows the
+   * schema's own set; omitted reads the full set from the namespace schema.
+   */
+  levels?: readonly string[]
+  /**
+   * The wire values an `efforts` list may carry, when the owning protocol
+   * accepts a fixed vocabulary. Present, the value control becomes a select
+   * over exactly these; absent, it stays free text.
+   */
+  values?: readonly string[]
 }
 
 const e = React.createElement
@@ -18,8 +29,11 @@ export function KeyValueList(props: KeyValueListProps) {
   const values = isObject(props.value) ? props.value : {}
   const levels = props.kind === 'efforts'
   // Levels come from the namespace schema (the schema keeps them there), so a
-  // level the adapter stops accepting disappears from the picker with it.
-  const levelChoices = levels ? reasoningLevelChoices() : []
+  // level the adapter stops accepting disappears from the picker with it. A
+  // protocol that accepts fewer still narrows that further.
+  const levelChoices = levels
+    ? [...(props.levels ?? reasoningLevelChoices())]
+    : []
   const entries = levels
     ? Object.entries(values).sort(([a], [b]) => {
         const indexA = levelChoices.indexOf(a)
@@ -100,23 +114,33 @@ export function KeyValueList(props: KeyValueListProps) {
               placeholderKey: 'controls.keyValue.headers.keyPlaceholder',
               onChange: (nextKey) => setEntry(key, nextKey, value),
             }),
-        e(TextInput, {
-          value: value === null ? '' : value,
-          disabled: props.disabled,
-          emptyAsUndefined: false,
-          placeholderKey:
-            levels && key === 'off'
-              ? 'controls.keyValue.efforts.offValuePlaceholder'
-              : levels
-                ? 'controls.keyValue.efforts.valuePlaceholder'
-                : 'controls.keyValue.headers.valuePlaceholder',
-          onChange: (nextValue) =>
-            setEntry(
-              key,
-              key,
-              levels && key === 'off' && nextValue === '' ? null : nextValue,
-            ),
-        }),
+        props.values !== undefined && levels
+          ? e(Select, {
+              value: value === null ? undefined : String(value),
+              disabled: props.disabled,
+              allowUnset: false,
+              choices: [...props.values],
+              onChange: (nextValue) => setEntry(key, key, nextValue ?? null),
+            })
+          : e(TextInput, {
+              value: value === null ? '' : value,
+              disabled: props.disabled,
+              emptyAsUndefined: false,
+              placeholderKey:
+                levels && key === 'off'
+                  ? 'controls.keyValue.efforts.offValuePlaceholder'
+                  : levels
+                    ? 'controls.keyValue.efforts.valuePlaceholder'
+                    : 'controls.keyValue.headers.valuePlaceholder',
+              onChange: (nextValue) =>
+                setEntry(
+                  key,
+                  key,
+                  levels && key === 'off' && nextValue === ''
+                    ? null
+                    : nextValue,
+                ),
+            }),
         e(
           'button',
           {

@@ -523,6 +523,35 @@ test('the official editor states its listing posture and offers the way back', (
   }
 })
 
+test('a protocol with no compat type renders no compat card', () => {
+  // pi-ai declares no compat type for Gemini, so there is nothing to offer.
+  // Rendering an empty card would still promise switches the adapter never
+  // sends, which is the failure mode this card was rewritten to stop.
+  assert.match(
+    source('src/client/controls/compat-editor.ts'),
+    /if \(fields\.length === 0\) return null/,
+  )
+  // The hook must run before that return: a component whose first hook is
+  // conditional changes hook order between renders.
+  const editor = source('src/client/controls/compat-editor.ts')
+  assert.ok(
+    editor.indexOf('React.useState') < editor.indexOf('fields.length === 0'),
+  )
+})
+
+test('the engine floor follows the DSH release this build targets', () => {
+  // DSH 0.2.2 requires Node 24.9 and dropped Node 22 entirely, so the plugin
+  // mirrors that rather than advertising a runtime its own host refuses.
+  const manifest = JSON.parse(source('package.json'))
+  assert.equal(manifest.engines.dsh, '>=0.2.2-rc.2')
+  assert.equal(manifest.engines.node, '>=24.9.0')
+  for (const peer of [
+    '@deepseek-ai/dsh-client-ui-primitives',
+    '@deepseek-ai/dsh-client-ui-slots',
+  ])
+    assert.equal(manifest.peerDependencies[peer], '^0.2.2-rc.2')
+})
+
 test('the nav glyph is a slot contribution, not a DOM rewrite', () => {
   const index = source('src/client/index.ts')
   assert.match(index, /ctx\.slots\.inject\('settings\.section\.icon'/)

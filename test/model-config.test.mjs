@@ -6,6 +6,7 @@ import {
   OFFICIAL_REASONING,
   PROFILE_FIELDS,
   SETTINGS_NS,
+  THINKING_LEVELS,
   TOOL_UPDATES,
 } from '../src/client/constants.ts'
 import { planSave } from '../src/client/plan.ts'
@@ -22,12 +23,16 @@ import {
   initialEditorState,
   stripModelCompat,
 } from '../src/client/state.ts'
-import { createDefaultReasoningEfforts } from '../src/client/choices.ts'
+import {
+  createDefaultReasoningEfforts,
+  protocolReasoningLevels,
+} from '../src/client/choices.ts'
 import { formatCapacity, parseCapacity } from '../src/client/utils.ts'
 import {
   validateModel,
   validateOfficialProfile,
   validateProfile,
+  validateProtocolReasoningEfforts,
   validateRetryPolicy,
 } from '../src/client/validation.ts'
 
@@ -344,6 +349,12 @@ test('rejects invalid retry, simultaneous catalog modes, and invalid model reaso
     validateModel({ id: 'one', reasoningEfforts: { high: '' } }).join(' '),
     /validation\.invalid/,
   )
+  // A map that declares only `off` offers no thinking level, which the adapter
+  // refuses rather than reading as "reasoning available but never sent".
+  assert.match(
+    validateModel({ id: 'one', reasoningEfforts: { off: null } }).join(' '),
+    /effortsNeedsLevel/,
+  )
 })
 
 test('only user-layer profiles count as user-added rows', () => {
@@ -659,6 +670,77 @@ test('creates default custom reasoning efforts in order from off to max', () => 
     'xhigh',
     'max',
   ])
+})
+
+test('a Gemini route offers only the levels its implementation resolves', () => {
+  // pi-ai's Gemini implementation throws unless the level it resolves lands on
+  // one of four names, so a fresh map for such a route holds exactly those and
+  // no `off`, whose value the implementation never reads as a level.
+  assert.deepEqual(protocolReasoningLevels('google-generative-ai'), [
+    'minimal',
+    'low',
+    'medium',
+    'high',
+  ])
+  assert.deepEqual(createDefaultReasoningEfforts('google-generative-ai'), {
+    minimal: 'minimal',
+    low: 'low',
+    medium: 'medium',
+    high: 'high',
+  })
+  // Every other protocol keeps the schema's full set, including an unset one.
+  for (const api of [undefined, 'openai-completions', 'anthropic-messages'])
+    assert.deepEqual(protocolReasoningLevels(api), THINKING_LEVELS)
+})
+
+test('refuses reasoning a Gemini route cannot send and accepts what it can', () => {
+  // The validator collects into a caller-owned array rather than returning
+  // one, matching the rest of this module.
+  const geminiErrors = (reasoningEfforts) => {
+    const errors = []
+    validateProtocolReasoningEfforts(
+      reasoningEfforts,
+      'efforts',
+      errors,
+      'google-generative-ai',
+    )
+    return errors
+  }
+  assert.deepEqual(
+    validateProfile({
+      api: 'google-generative-ai',
+      models: [
+        { id: 'gemini-3-pro', reasoningEfforts: { low: 'low', high: 'high' } },
+      ],
+    }),
+    [],
+  )
+  // A level outside the four names would fail at request time, not at save.
+  assert.deepEqual(geminiErrors({ xhigh: 'xhigh' }), ['validation.geminiLevel'])
+  // An alias resolving to one of the names is legal: the implementation
+  // compares the resolved string, not the configured spelling.
+  assert.deepEqual(geminiErrors({ high: 'HIGH' }), [])
+  assert.deepEqual(geminiErrors({ high: 'very-high' }), [
+    'validation.geminiValue',
+  ])
+  // The route-level check refuses the same configuration on the route itself,
+  // because a model entry's efforts are judged by the route's protocol too.
+  assert.deepEqual(
+    validateProfile({
+      api: 'google-generative-ai',
+      models: [{ id: 'gemini-3-pro', reasoningEfforts: { max: 'max' } }],
+    }).length,
+    1,
+  )
+  // Another protocol is untouched by any of it.
+  const other = []
+  validateProtocolReasoningEfforts(
+    { xhigh: 'xhigh' },
+    'efforts',
+    other,
+    'openai-completions',
+  )
+  assert.deepEqual(other, [])
 })
 
 test('validates the official model toolUpdate mode', () => {

@@ -108,6 +108,12 @@ export const COMPAT_PROTOCOL_FIELDS: Record<string, readonly string[]> = {
     'supportsStrictTools',
     'supportsLongCacheRetention',
   ],
+  // pi-ai gives Gemini no compat type at all, so the adapter's gate is
+  // undefined for it: a route-level switch skips past every model on the route
+  // and a model-level one is refused outright. An empty list is that fact, and
+  // it has to be listed rather than omitted — an absent key falls back to the
+  // completions set below.
+  'google-generative-ai': [],
 }
 
 /** The protocol used when a route names none, matching the adapter's default. */
@@ -120,9 +126,15 @@ export const DEFAULT_PROTOCOL = 'openai-completions'
  * @returns the offered fields; empty when the protocol declares no compat type.
  */
 export function compatFields(api: string | undefined): CompatField[] {
-  const allowed =
-    COMPAT_PROTOCOL_FIELDS[api ?? DEFAULT_PROTOCOL] ??
-    COMPAT_PROTOCOL_FIELDS[DEFAULT_PROTOCOL]
+  const key = api ?? DEFAULT_PROTOCOL
+  // A protocol the table names keeps its own list even when it is empty; only
+  // a protocol the table does not know falls back to the default set.
+  const allowed = Object.prototype.hasOwnProperty.call(
+    COMPAT_PROTOCOL_FIELDS,
+    key,
+  )
+    ? COMPAT_PROTOCOL_FIELDS[key]
+    : COMPAT_PROTOCOL_FIELDS[DEFAULT_PROTOCOL]
   return COMPAT_FIELDS.filter((field) => allowed.includes(field.key))
 }
 

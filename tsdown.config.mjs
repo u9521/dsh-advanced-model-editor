@@ -24,7 +24,7 @@ const ID = '@local/dsh-advanced-model-editor'
 /**
  * Platform modules the shell shares into the frozen module table: the exact
  * `PLATFORM_MODULES` list `@deepseek-ai/dsh-client-web` publishes (DSH
- * 0.2.2-rc.1). Each stays an external `require`; everything else is bundled.
+ * 0.2.2-rc.2). Each stays an external `require`; everything else is bundled.
  *
  * `test/platform-modules.test.mjs` compares this list with the installed
  * shell's own declaration, so an upgrade that adds or drops a seed module

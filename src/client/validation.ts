@@ -2,6 +2,8 @@ import { compatFields } from './compat.ts'
 import {
   BUDGET_LEVELS,
   CACHE_RETENTIONS,
+  GEMINI_PROTOCOL,
+  GEMINI_REASONING_LEVELS,
   MAX_TIMER_DELAY_MS,
   MODALITIES,
   OFFICIAL_REASONING,
@@ -91,6 +93,19 @@ export function validateCompat(
   // module was split out to remove.
 }
 
+/**
+ * Validate one `reasoningEfforts` map.
+ *
+ * The schema's own rules apply everywhere: levels come from the adapter's
+ * escalation list, every level but `off` needs a wire value, and `off` may
+ * leave it empty because absence is how "send nothing" travels. A protocol that
+ * accepts fewer levels narrows this further — see
+ * {@link validateProtocolReasoningEfforts} — which is a rule the schema cannot
+ * state because it is one protocol's implementation detail.
+ * @param value - the drafted efforts, `false`, or a non-map.
+ * @param path - field label used in the messages.
+ * @param errors - collected failures.
+ */
 export function validateReasoningEfforts(
   value: unknown,
   path: string,
@@ -109,6 +124,47 @@ export function validateReasoningEfforts(
         errors.push(tr('validation.invalid', { field: `${path}.off` }))
     } else if (typeof wire !== 'string' || wire.trim().length === 0)
       errors.push(tr('validation.invalid', { field: `${path}.${level}` }))
+  }
+  // A map holding only `off` declares no thinking level at all: the adapter
+  // reads it as "reasoning is on, but nothing it can send", and refuses it.
+  if (!Object.keys(value).some((level) => level !== 'off'))
+    errors.push(tr('validation.effortsNeedsLevel'))
+}
+
+/**
+ * Validate a `reasoningEfforts` map against the protocol that will send it.
+ *
+ * pi-ai's Gemini implementation resolves a level through the model's
+ * `thinkingLevelMap` and throws unless the result is `minimal`, `low`,
+ * `medium`, or `high`. A level or a wire value outside that vocabulary is
+ * therefore a configuration that saves and then fails every request, so it is
+ * refused here — in the route's own card and in the create form alike.
+ * @param value - the drafted efforts, `false`, or a non-map.
+ * @param path - field label used in the messages.
+ * @param errors - collected failures.
+ * @param api - the route's wire protocol; only Gemini narrows anything.
+ */
+export function validateProtocolReasoningEfforts(
+  value: unknown,
+  path: string,
+  errors: string[],
+  api: string | undefined,
+): void {
+  if (api !== GEMINI_PROTOCOL || value === false || !isObject(value)) return
+  const levels = GEMINI_REASONING_LEVELS as string[]
+  for (const [level, wire] of Object.entries(value)) {
+    // An unrecognized level is one mistake, so it is reported once: the
+    // value check below would only restate it in this protocol's vocabulary.
+    if (!levels.includes(level)) {
+      errors.push(tr('validation.geminiLevel', { level }))
+      continue
+    }
+    // The implementation resolves the level through the model's
+    // thinkingLevelMap and compares the lowercase result against its four
+    // names, so a value landing on one of them is legal: an alias spelled
+    // HIGH names the same level, not a different one.
+    if (typeof wire !== 'string' || !levels.includes(wire.toLowerCase()))
+      errors.push(tr('validation.geminiValue', { level }))
   }
 }
 
@@ -141,12 +197,19 @@ export function validateModel(
       model.input.some((item) => !MODALITIES.includes(item)))
   )
     errors.push(tr('validation.modalities'))
-  if (owns(model, 'reasoningEfforts'))
+  if (owns(model, 'reasoningEfforts')) {
     validateReasoningEfforts(
       model.reasoningEfforts,
       `${path}.reasoningEfforts`,
       errors,
     )
+    validateProtocolReasoningEfforts(
+      model.reasoningEfforts,
+      `${path}.reasoningEfforts`,
+      errors,
+      api,
+    )
+  }
   if (owns(model, 'compat'))
     validateCompat(model.compat, `${path}.compat`, errors, api)
   return errors

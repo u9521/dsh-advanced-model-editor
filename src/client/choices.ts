@@ -1,4 +1,6 @@
 import {
+  GEMINI_PROTOCOL,
+  GEMINI_REASONING_LEVELS,
   OFFICIAL_FIELDS,
   PROFILE_FIELDS,
   PROTOCOLS,
@@ -36,6 +38,26 @@ export function protocolChoices(): readonly string[] {
 /** Reasoning levels the model schema accepts as `reasoningEfforts` keys. */
 export function reasoningLevelChoices(): readonly string[] {
   return reasoningLevels
+}
+
+/**
+ * One route's reasoning levels, narrowed to what its protocol can send.
+ *
+ * The schema accepts every level the adapter models; an individual protocol
+ * does not. pi-ai's Gemini implementation resolves a level through the model's
+ * `thinkingLevelMap` and then throws unless the result is one of four names, so
+ * a Gemini route offering `off` or `xhigh` would fail the save the Host only
+ * rejects later, at request time.
+ * @param api - the route's wire protocol; unset means the schema's own set.
+ * @returns the levels to offer, in escalation order.
+ */
+export function protocolReasoningLevels(
+  api: string | undefined,
+): readonly string[] {
+  if (api !== GEMINI_PROTOCOL) return reasoningLevels
+  return reasoningLevels.filter((level) =>
+    (GEMINI_REASONING_LEVELS as string[]).includes(level),
+  )
 }
 
 /** Fields the llm-pi-ai profile schema declares, in declaration order. */
@@ -84,17 +106,22 @@ export function adoptSchemaChoices(
 }
 
 /**
- * Seed a custom `reasoningEfforts` map with the levels the adapter currently
- * accepts, using each level's own wire spelling. Levels come from the
- * namespace schema, so a level the adapter drops stops being offered.
+ * Seed a custom `reasoningEfforts` map with the levels a route can send, using
+ * each level's own wire spelling. Levels come from the namespace schema, so a
+ * level the adapter drops stops being offered; the route's protocol narrows
+ * that further, so a fresh Gemini map holds no level its implementation would
+ * reject.
  *
  * This lives beside the level list it reads rather than in `utils.ts`, which is
  * what used to make `utils -> choices -> settings -> utils` a cycle.
+ * @param api - the route's wire protocol; unset takes the schema's own set.
  * @returns a fresh effort map keyed in escalation order.
  */
-export function createDefaultReasoningEfforts(): ReasoningEfforts {
+export function createDefaultReasoningEfforts(
+  api?: string | undefined,
+): ReasoningEfforts {
   const result: ReasoningEfforts = {}
-  for (const level of reasoningLevelChoices()) {
+  for (const level of protocolReasoningLevels(api)) {
     result[level] = level === 'off' ? null : level
   }
   return result

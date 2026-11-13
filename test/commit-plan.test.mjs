@@ -2,7 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { commit, diffProfile, removeProfile } from '../src/client/commit.ts'
-import { PROFILE_FIELDS, SETTINGS_NS } from '../src/client/constants.ts'
+import {
+  PROFILE_FIELDS,
+  PROTOCOLS,
+  SETTINGS_NS,
+} from '../src/client/constants.ts'
 import { planReplace, planSave } from '../src/client/plan.ts'
 import {
   credentialStatus,
@@ -271,13 +275,31 @@ test('the compat table offers exactly the keys each protocol lists', () => {
   assert.equal(compatFields('openai-completions').length, 19)
   assert.equal(compatFields('openai-responses').length, 4)
   assert.equal(compatFields('anthropic-messages').length, 7)
+  // pi-ai declares no compat type for Gemini, so the empty list is the fact,
+  // not an omission — and it must be spelled out, because a missing key falls
+  // back to the completions set.
+  assert.equal(compatFields('google-generative-ai').length, 0)
   assert.equal(COMPAT_FIELDS.length, 26)
+  // Every protocol the page offers is classified; an unclassified one would
+  // silently inherit the completions switches.
+  for (const api of PROTOCOLS) {
+    assert.ok(
+      Object.prototype.hasOwnProperty.call(COMPAT_PROTOCOL_FIELDS, api),
+      `${api} has no compat entry`,
+    )
+  }
 })
 
-test('an unknown protocol falls back to the same set the editor renders', () => {
+test('only an unknown protocol falls back to the default set', () => {
   assert.deepEqual(
     compatFields('no-such-api').map((field) => field.key),
     compatFields('openai-completions').map((field) => field.key),
+  )
+  // A protocol with an empty list must not be mistaken for an unknown one.
+  assert.deepEqual(compatFields('google-generative-ai'), [])
+  assert.deepEqual(
+    filterCompatForProtocol({ supportsStore: true }, 'google-generative-ai'),
+    undefined,
   )
 })
 

@@ -1,7 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { PROFILE_FIELDS, OFFICIAL_FIELDS } from '../src/client/constants.ts'
-import { COMPAT_FIELDS, COMPAT_PROTOCOL_FIELDS } from '../src/client/compat.ts'
+import {
+  COMPAT_FIELDS,
+  COMPAT_PROTOCOL_FIELDS,
+  compatFields,
+} from '../src/client/compat.ts'
 import {
   CACHE_CONTROL_FORMATS,
   MAX_TOKENS_FIELDS,
@@ -152,6 +156,83 @@ function runtimeEnum(source, name) {
   ].map((match) => match[1])
 }
 
+/**
+ * Read the adapter own protocol table.
+ *
+ * `supportedProtocols()` returns `Object.keys(PROTOCOLS)` and the settings
+ * schema union is built from the same object, so its keys and their order are
+ * one fact rather than two.
+ * @param source - the package lib/index.js text.
+ * @returns the protocol identifiers in table order, or an empty list.
+ */
+function runtimeProtocols(source) {
+  const start = source.indexOf('const PROTOCOLS = {')
+  if (start < 0) return []
+  const end = source.indexOf('};', start)
+  if (end < 0) return []
+  return [...source.slice(start, end).matchAll(/\t"([a-z-]+)":/g)].map(
+    (match) => match[1],
+  )
+}
+
+/**
+ * The `offer` field names of one gate literal.
+ * @param body - the gate object text.
+ * @returns the offered field names in declaration order.
+ */
+function offeredIn(body) {
+  return [...body.matchAll(/(\w+): "offer"/g)].map((match) => match[1])
+}
+
+/**
+ * Read every compat gate the adapter declares, keyed by protocol.
+ *
+ * The adapter groups gates by pi-ai compat *type*, so three Responses protocols
+ * share one constant while `anthropic-messages` spells its own inline. Only the
+ * `offer` disposition is a field the page may show; `withhold` is a switch the
+ * catalog sets itself.
+ * @param source - the package lib/index.js text.
+ * @returns offered field names per protocol, in gate order.
+ */
+function runtimeCompatGates(source) {
+  const constants = new Map()
+  for (const match of source.matchAll(
+    /const (\w+_COMPAT_GATE) = \{([\s\S]*?)\n\};/g,
+  ))
+    constants.set(match[1], offeredIn(match[2]))
+  const start = source.indexOf('const COMPAT_GATES = {')
+  if (start < 0) return {}
+  const gates = {}
+  // Walk the table one declaration at a time instead of matching it whole: a
+  // gate is either a shared constant or an inline object literal that itself
+  // spans lines, and a single pattern covering both swallows the entries that
+  // follow it.
+  let open
+  for (const line of source.slice(start).split('\n').slice(1)) {
+    if (line === '};') break
+    const named = line.match(/^\t"([a-z-]+)": (\w+),$/)
+    if (named !== null) {
+      gates[named[1]] = constants.get(named[2]) ?? []
+      open = undefined
+      continue
+    }
+    const inline = line.match(/^\t"([a-z-]+)": \{$/)
+    if (inline !== null) {
+      open = inline[1]
+      gates[open] = []
+      continue
+    }
+    // The closing brace of an inline literal, and only that: a field line
+    // never starts at column zero, so this cannot end a gate early.
+    if (line === '\t},') {
+      open = undefined
+      continue
+    }
+    if (open !== undefined) gates[open].push(...offeredIn(line))
+  }
+  return gates
+}
+
 test('enum literals match the installed pi-ai runtime', (t) => {
   const runtime = requireDsh(t, 'dsh-llm-pi-ai', 'lib/index.js')
   if (runtime === undefined) return
@@ -170,12 +251,38 @@ test('enum literals match the installed pi-ai runtime', (t) => {
     assert.ok(declared.length > 0, `could not read ${name} from llm-pi-ai`)
     assert.deepEqual([...expected], declared, `${name} drifted from llm-pi-ai`)
   }
-  // The protocol union is a runtime schema union, read from the settings schema
-  // by choices.ts; the compiled fallback only has to be a subset of the three
-  // protocols pi-ai serves.
-  assert.deepEqual([...PROTOCOLS].sort(), [
-    'anthropic-messages',
-    'openai-completions',
-    'openai-responses',
-  ])
+  // The protocol choice list is shown before the first describe answer lands,
+  // so it must equal the adapter's own table exactly — in its order, because
+  // that order is what the select renders and what names the default.
+  assert.deepEqual(
+    [...PROTOCOLS],
+    runtimeProtocols(runtime),
+    'PROTOCOLS drifted from the llm-pi-ai protocol table',
+  )
+})
+
+test('the compat table offers exactly what each protocol gate offers', (t) => {
+  const runtime = requireDsh(t, 'dsh-llm-pi-ai', 'lib/index.js')
+  if (runtime === undefined) return
+  const gates = runtimeCompatGates(runtime)
+  assert.ok(
+    Object.keys(gates).length > 0,
+    'could not read COMPAT_GATES from llm-pi-ai',
+  )
+  // Iterating the page's own protocol list is what makes an absent gate an
+  // assertion too: Gemini has no compat type in pi-ai at all, so its expected
+  // set is empty, and a page that offered it the completions switches would
+  // show controls whose writes the adapter then skips or refuses.
+  // Set comparison, not list comparison: the page's per-protocol lists exist to
+  // filter one table, whose own order is the schema's, so a protocol listing its
+  // fields in a different order changes nothing a user sees.
+  for (const api of PROTOCOLS) {
+    assert.deepEqual(
+      compatFields(api)
+        .map((field) => field.key)
+        .sort(),
+      [...(gates[api] ?? [])].sort(),
+      `compat fields drifted for "${api}"`,
+    )
+  }
 })

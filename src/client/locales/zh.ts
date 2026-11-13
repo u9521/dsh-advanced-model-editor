@@ -128,6 +128,7 @@ export const zh: LocaleDictionary = {
     officialBaseURL: 'https://api.deepseek.com',
     apiKeyEnv: 'PROVIDER_API_KEY',
     baseURL: 'https://api.example.com/v1',
+    baseURLGemini: 'https://generativelanguage.googleapis.com/v1beta',
     deepseekURL: 'https://api.deepseek.com',
     providerName: 'My Provider',
     headerName: '请求头名称',
@@ -197,6 +198,7 @@ export const zh: LocaleDictionary = {
     object: '{field}必须为对象。',
     invalid: '{field}无效。',
     efforts: '推理档位映射必须为 false 或非空映射。',
+    effortsNeedsLevel: '推理档位至少需要一个 off 以外的档位。',
     modelId: '{index}的模型 ID 无效。',
     modalities: '输入模态无效。',
     retry: '重试策略无效。',
@@ -204,6 +206,10 @@ export const zh: LocaleDictionary = {
     retryCodes: '可重试错误码必须为非空且不重复的字符串列表。',
     credentialRef: '凭据引用必须是有效的环境变量名。',
     protocol: 'API 协议无效。',
+    geminiLevel:
+      'Gemini 仅接受 minimal、low、medium、high 四档推理等级，{level} 不在其中。',
+    geminiValue:
+      'Gemini 会通过 thinking level 映射解析 {level}，其线值必须是 minimal、low、medium 或 high。',
     modalitiesRequired: '默认输入模态必须为非空列表。',
     headers: '请求头无效。',
     reasoning: '默认推理档位无效。',
@@ -306,6 +312,7 @@ export const zh: LocaleDictionary = {
       'openai-completions': 'OpenAI Completions',
       'openai-responses': 'OpenAI Responses',
       'anthropic-messages': 'Anthropic Messages',
+      'google-generative-ai': 'Gemini API',
     },
     modality: { text: '文本', image: '图片' },
     reasoningLevel: {

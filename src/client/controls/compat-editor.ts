@@ -115,6 +115,10 @@ export function CompatEditor(props: CompatEditorProps) {
   >
   const read = (key: string): unknown => compat[key]
   const fields = compatFields(props.api)
+  // A protocol pi-ai gives no compat type has nothing to offer, so the card is
+  // absent rather than an empty box: a Gemini route's switches would be skipped
+  // at route level and refused at model level, never sent.
+  if (fields.length === 0) return null
   const set = (field: string, value: unknown) => {
     const next: Record<string, unknown> = { ...compat }
     if (value === undefined || value === '') delete next[field]

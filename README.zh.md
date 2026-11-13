@@ -15,10 +15,15 @@ LLM 提供方配置——覆盖自定义提供方命名空间（`llm-pi-ai`）�
 已被编辑过的目录取代，还是当前端点本就非官方端点——并提供**恢复默认**动作，
 清除覆盖后重新回到跟随状态。
 
+路由可采用 OpenAI Completions、OpenAI Responses、Anthropic Messages 或 Gemini API
+四种协议。编辑界面会按协议收窄到该协议真正接受的范围：Gemini 路由只提供其实现认识的
+四档推理等级，等级取值同样来自这份固定词表，并且完全不显示兼容性开关——pi-ai 没有为
+该协议声明 compat 类型，写上去的开关要么被跳过，要么被拒绝。
+
 ## 环境要求
 
-- **DSH** `>= 0.2.2-rc.1` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
-- **Node.js** `^22.19 || >=24`。
+- **DSH** `>= 0.2.2-rc.2` —— 仅支持当前版本，不提供旧版 DSH 的向后兼容层。
+- **Node.js** `>=24.9.0`，与 DSH 自身的下限一致。
 
 ---
 
@@ -55,7 +60,7 @@ dsh plugin --profile web add github:u9521/dsh-advanced-model-editor#dist
 - **务必安装 pnpm**——`npx get-pnpm`（参见 <https://pnpm.io/installation>；也可用
   `corepack enable` 或 `npm install -g pnpm`）。构建与 `dsh plugin --profile web add`
   都需要 pnpm（后者内部会转发给 pnpm 执行）。
-- **Node.js** `^22.19 || >=24`。
+- **Node.js** `>=24.9.0`。
 
 ### 1. 克隆
 

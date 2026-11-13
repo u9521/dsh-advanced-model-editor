@@ -44,4 +44,5 @@ the fake-DOM scaffolding that tested them.
   inherited-versus-explicit distinction, and the bilingual copy — are untouched,
   so the decision to keep a standalone section stands.
 - A shell that predates the slot would render its own glyph and log no error,
-  which is why `package.json` now requires `>= 0.2.2-rc.1`.
+  which is why `package.json` requires `>= 0.2.2-rc.2` — the release this plugin
+  now targets exclusively, with no compatibility path for 0.2.1 or 0.2.2-rc.1.

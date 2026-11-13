@@ -1,6 +1,10 @@
 import * as React from 'react'
 import type { ReasoningEfforts } from '../types.ts'
-import { createDefaultReasoningEfforts } from '../choices.ts'
+import {
+  createDefaultReasoningEfforts,
+  protocolReasoningLevels,
+} from '../choices.ts'
+import { GEMINI_PROTOCOL, GEMINI_REASONING_LEVELS } from '../constants.ts'
 import { tr } from '../i18n.ts'
 import { isObject } from '../utils.ts'
 import { Select } from './inputs.ts'
@@ -12,6 +16,8 @@ export interface ReasoningEffortsEditorProps {
   disabled?: boolean
   titleKey?: string
   defaultOpen?: boolean
+  /** The owning route's wire protocol, which narrows the offered levels. */
+  api?: string
 }
 
 const e = React.createElement
@@ -39,7 +45,7 @@ export function ReasoningEffortsEditor(props: ReasoningEffortsEditorProps) {
     } else if (nextMode === 'disabled') {
       props.onChange(false)
     } else if (nextMode === 'custom') {
-      props.onChange(createDefaultReasoningEfforts())
+      props.onChange(createDefaultReasoningEfforts(props.api))
     }
   }
 
@@ -111,6 +117,10 @@ export function ReasoningEffortsEditor(props: ReasoningEffortsEditorProps) {
                 kind: 'efforts',
                 value: props.value as Record<string, string | number | null>,
                 disabled: props.disabled,
+                levels: protocolReasoningLevels(props.api),
+                ...(props.api === GEMINI_PROTOCOL
+                  ? { values: GEMINI_REASONING_LEVELS }
+                  : {}),
                 onChange: (nextValue) =>
                   props.onChange(nextValue as ReasoningEfforts),
               })

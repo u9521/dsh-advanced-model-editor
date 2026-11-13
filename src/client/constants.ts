@@ -108,10 +108,30 @@ export const CACHE_CONTROL_FORMATS: string[] = ['anthropic']
 // control kind. Keeping a second allow-list here is what let the editor fall
 // two fields behind the adapter it was supposed to offer.
 
+// Declaration order is the adapter's own table, which is what a select shows
+// and why the first entry is the default a new route starts on.
 export const PROTOCOLS: Protocol[] = [
   'openai-completions',
   'openai-responses',
   'anthropic-messages',
+  'google-generative-ai',
+]
+
+/**
+ * The one protocol whose reasoning levels come from a fixed vocabulary: pi-ai's
+ * Gemini implementation maps a level through `thinkingLevelMap` and then throws
+ * unless the result is `minimal`, `low`, `medium`, or `high`. A route on it
+ * offers only these, and its form of "off" is a disabled thinking
+ * configuration rather than a level name.
+ */
+export const GEMINI_PROTOCOL: Protocol = 'google-generative-ai'
+
+/** Reasoning levels pi-ai's Gemini implementation accepts as a wire value. */
+export const GEMINI_REASONING_LEVELS: ThinkingLevel[] = [
+  'minimal',
+  'low',
+  'medium',
+  'high',
 ]
 
 export const TRANSPORTS: Transport[] = [

@@ -122,9 +122,10 @@ export const PI_AI_MODEL_FIELDS: readonly ModelField[] = [
     key: 'reasoningEfforts',
     labelKey: 'models.field.reasoningEfforts',
     wide: true,
-    render: (model, set, disabled) =>
+    render: (model, set, disabled, api) =>
       e(ReasoningEffortsEditor, {
         value: model.reasoningEfforts,
+        api,
         disabled,
         titleKey: 'models.field.reasoningEfforts',
         onChange: (value) => set('reasoningEfforts', value),

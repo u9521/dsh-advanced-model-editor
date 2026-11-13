@@ -4,7 +4,10 @@ export type ThinkingLevel =
   'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 export type Protocol =
-  'openai-completions' | 'openai-responses' | 'anthropic-messages'
+  | 'openai-completions'
+  | 'openai-responses'
+  | 'anthropic-messages'
+  | 'google-generative-ai'
 
 export type Transport = 'sse' | 'websocket' | 'websocket-cached' | 'auto'
 
